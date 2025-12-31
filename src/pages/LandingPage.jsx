@@ -8,7 +8,8 @@ import './LandingPage.css';
 const LandingPage = () => {
     const { user, loading: authLoading } = useAuth();
     const [liveStats, setLiveStats] = useState({
-        totalUsers: 0,
+        totalRegisteredUsers: 0,
+        devoteesChanted: 0,
         totalNamaCount: 0,
         activeAccounts: 0
     });
@@ -16,6 +17,13 @@ const LandingPage = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            let userCount = 0;
+            let totalNama = 0;
+            let totalDevoteesSum = 0;
+            let accountCount = 0;
+            let fallbackUserCount = 0;
+
+            // 1. Fetch Nama Entries (Core Stats)
             try {
                 const namaResponse = await databases.listDocuments(
                     DATABASE_ID,
@@ -23,28 +31,52 @@ const LandingPage = () => {
                     [Query.limit(10000)]
                 );
 
-                const totalNama = namaResponse.documents?.reduce((sum, entry) => sum + (entry.count || 0), 0) || 0;
+                totalNama = namaResponse.documents?.reduce((sum, entry) => sum + (entry.count || 0), 0) || 0;
 
-                // Sum devotees from entries (default to 1 if not specified)
-                const totalDevoteesSum = namaResponse.documents?.reduce((sum, entry) => {
+                // Sum devotees from entries
+                totalDevoteesSum = namaResponse.documents?.reduce((sum, entry) => {
                     const devotees = parseInt(entry.devotee_count);
                     return sum + (isNaN(devotees) || devotees === 0 ? 1 : devotees);
                 }, 0) || 0;
 
                 const activeAccountIds = new Set(namaResponse.documents?.map(entry => entry.account_id).filter(Boolean));
-                const accountCount = activeAccountIds.size;
+                accountCount = activeAccountIds.size;
 
-                setLiveStats({
-                    totalUsers: totalDevoteesSum,
-                    totalNamaCount: totalNama,
-                    activeAccounts: accountCount || 0
-                });
+                // Calculate fallback user count from unique user_ids in entries
+                const uniqueUserIds = new Set(namaResponse.documents?.map(entry => entry.user_id).filter(Boolean));
+                fallbackUserCount = uniqueUserIds.size;
 
             } catch (err) {
-                console.error('Error fetching landing data:', err);
-            } finally {
-                setLoading(false);
+                console.error('Error fetching nama stats:', err);
             }
+
+            // 2. Fetch Total Users (Optional/Permission Sensitive)
+            try {
+                const usersResponse = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.USERS,
+                    [Query.limit(0)] // We only need the total count
+                );
+                userCount = usersResponse.total || 0;
+            } catch (err) {
+                console.warn('Error fetching user count (likely permission issue), using fallback:', err);
+                // Fallback: Use unique user IDs from nama entries
+                userCount = fallbackUserCount;
+            }
+
+            // If userCount is still 0 (e.g. fetch succeeded but returned 0, or both failed), 
+            // but we have fallback data, prefer the larger number to avoid showing "0 Users" artificially.
+            if (userCount === 0 && fallbackUserCount > 0) {
+                userCount = fallbackUserCount;
+            }
+
+            setLiveStats({
+                totalRegisteredUsers: userCount,
+                devoteesChanted: totalDevoteesSum,
+                totalNamaCount: totalNama,
+                activeAccounts: accountCount
+            });
+            setLoading(false);
         };
 
         fetchData();
@@ -103,7 +135,11 @@ const LandingPage = () => {
                 {/* Live Stats */}
                 <section className="stats-inline fade-in-delay-1">
                     <div className="stat-item">
-                        <span className="stat-num">{loading ? '...' : formatNumber(liveStats.totalUsers)}</span>
+                        <span className="stat-num">{loading ? '...' : formatNumber(liveStats.totalRegisteredUsers)}</span>
+                        <span className="stat-lbl">Total Users</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-num">{loading ? '...' : formatNumber(liveStats.devoteesChanted)}</span>
                         <span className="stat-lbl">Devotees</span>
                     </div>
                     <div className="stat-item highlight">
