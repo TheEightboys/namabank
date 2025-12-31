@@ -252,15 +252,36 @@ const InvestNamaPage = () => {
                                                 </button>
                                             </div>
 
-                                            <div className="count-input-wrapper">
-                                                <input
-                                                    type="number"
-                                                    value={counts[account.id] || 0}
-                                                    onChange={(e) => handleCountChange(account.id, e.target.value)}
-                                                    className="form-input count-input"
-                                                    min="0"
-                                                    placeholder="0"
-                                                />
+                                            <div className="inputs-row" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                                <div className="input-group" style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', display: 'block' }}>Nama Count</label>
+                                                    <input
+                                                        type="number"
+                                                        value={counts[account.id] || ''}
+                                                        onChange={(e) => handleCountChange(account.id, e.target.value)}
+                                                        className="form-input count-input"
+                                                        min="0"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+
+                                                <div className="input-divider" style={{ display: 'flex', alignItems: 'center', paddingTop: '1.5rem', color: '#999' }}>OR</div>
+
+                                                <div className="input-group" style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', display: 'block' }}>Minutes (Approx)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={counts[account.id] ? (counts[account.id] / 12).toFixed(1) : ''}
+                                                        onChange={(e) => {
+                                                            const mins = parseFloat(e.target.value) || 0;
+                                                            handleCountChange(account.id, Math.round(mins * 12));
+                                                        }}
+                                                        className="form-input count-input"
+                                                        min="0"
+                                                        placeholder="0 min"
+                                                        step="0.5"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

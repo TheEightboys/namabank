@@ -457,22 +457,28 @@ export const bulkCreateUsers = async (users, defaultAccountIds = []) => {
 // Prayer Service
 // ============================================
 
-export const submitPrayer = async (prayerData) => {
+export const submitPrayer = async (prayerData, userId = null) => {
+    const data = {
+        name: prayerData.name,
+        email: prayerData.email,
+        phone: prayerData.phone || null,
+        privacy: prayerData.privacy || 'public',
+        prayer_text: prayerData.prayer_text,
+        email_notifications: prayerData.email_notifications || false,
+        status: 'pending',
+        prayer_count: 0,
+        created_at: new Date().toISOString()
+    };
+
+    if (userId) {
+        data.user_id = userId;
+    }
+
     const response = await databases.createDocument(
         DATABASE_ID,
         COLLECTIONS.PRAYERS,
         ID.unique(),
-        {
-            name: prayerData.name,
-            email: prayerData.email,
-            phone: prayerData.phone || null,
-            privacy: prayerData.privacy || 'public',
-            prayer_text: prayerData.prayer_text,
-            email_notifications: prayerData.email_notifications || false,
-            status: 'pending',
-            prayer_count: 0,
-            created_at: new Date().toISOString()
-        }
+        data
     );
     return { ...response, id: response.$id };
 };
@@ -481,7 +487,7 @@ export const getApprovedPrayers = async () => {
     const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.PRAYERS,
-        [Query.equal('status', 'approved'), Query.orderDesc('approved_at')]
+        [Query.equal('status', 'approved'), Query.orderDesc('created_at')]
     );
     return response.documents.map(doc => ({ ...doc, id: doc.$id })) || [];
 };

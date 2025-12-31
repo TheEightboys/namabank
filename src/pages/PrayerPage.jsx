@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getApprovedPrayers, submitPrayer, incrementPrayerCount } from '../services/namaService';
 import './PrayerPage.css';
 
 const PrayerPage = () => {
+    const { user } = useAuth();
     const { success, error } = useToast();
 
     const [prayers, setPrayers] = useState([]);
@@ -52,7 +54,7 @@ const PrayerPage = () => {
 
         setSubmitting(true);
         try {
-            await submitPrayer(formData);
+            await submitPrayer(formData, user?.id);
             success('Your prayer request has been submitted for approval!');
             setFormData({
                 name: '',
