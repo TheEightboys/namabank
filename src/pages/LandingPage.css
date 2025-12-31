@@ -135,34 +135,7 @@
     border: 1px solid rgba(255, 153, 51, 0.2);
 }
 
-/* Teachings Links - Side by Side */
-.teachings-links {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin: 1.5rem 0;
-    padding: 1rem;
-}
 
-.teaching-link {
-    color: #8B0000;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color 0.3s ease;
-}
-
-.teaching-link:hover {
-    color: #FF6600;
-    text-decoration: underline;
-}
-
-.teaching-divider {
-    color: #ccc;
-    font-size: 1rem;
-}
 
 /* ================================
    Stats Section

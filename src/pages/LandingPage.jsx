@@ -177,14 +177,7 @@ const LandingPage = () => {
                     </div>
                     <p className="footer-tagline">Rooted in Nama. Growing in Faith. Bearing Fruits Beyond Life.</p>
 
-                    {/* Teachings Links - Side by Side */}
-                    <div className="teachings-links">
-                        <span className="teaching-link">Why Chant the Divine Name?</span>
-                        <span className="teaching-divider">|</span>
-                        <span className="teaching-link">Why Count Nama?</span>
-                        <span className="teaching-divider">|</span>
-                        <span className="teaching-link">Why Offer Nama Collectively?</span>
-                    </div>
+
 
                     <div className="admin-links">
                         <Link to="/moderator/login">Moderator</Link>

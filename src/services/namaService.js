@@ -86,7 +86,7 @@ export const submitNamaEntry = async (userId, accountId, count, sourceType = 'ma
     return { ...response, id: response.$id };
 };
 
-export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'manual', startDate = null, endDate = null) => {
+export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'manual', startDate = null, endDate = null, devoteeCount = null) => {
     const today = new Date().toISOString().split('T')[0];
     const results = [];
 
@@ -109,6 +109,10 @@ export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'm
             if (endDate && typeof endDate === 'string' && endDate.trim() !== '') {
                 entryData.end_date = endDate;
             }
+            // Add devotee count if provided
+            if (devoteeCount && !isNaN(parseInt(devoteeCount))) {
+                entryData.devotee_count = parseInt(devoteeCount);
+            }
 
             console.log('Submitting entry data:', entryData);
 
@@ -122,7 +126,18 @@ export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'm
         } catch (error) {
             console.error('Error submitting entry:', error);
             console.error('Entry data was:', entry);
-            console.error('Full error response:', error.response);
+
+            // enhanced error handling for missing attribute
+            if (error.code === 400 && error.message.includes('unknown_attribute: "devotee_count"')) {
+                console.error('SCHEMA ERROR: The "devotee_count" attribute is missing in Appwrite.');
+                throw new Error('Please add "devotee_count" (Integer) attribute to "nama_entries" collection in Appwrite Console.');
+            }
+            // Handle generic "Unknown attribute" error message format
+            if (error.message && error.message.includes('Unknown attribute: "devotee_count"')) {
+                console.error('SCHEMA ERROR: The "devotee_count" attribute is missing in Appwrite.');
+                throw new Error('Please add "devotee_count" (Integer) attribute to "nama_entries" collection in Appwrite Console.');
+            }
+
             throw error; // Re-throw to be handled by the caller
         }
     }

@@ -130,6 +130,14 @@
     font-weight: 600;
 }
 
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
 /* Devotees Summary */
 .devotees-summary {
     display: flex;
@@ -138,7 +146,7 @@
     background: linear-gradient(135deg, #8B0000, #A52A2A);
     border-radius: var(--radius-xl);
     padding: var(--space-5);
-    margin-bottom: var(--space-4);
+    margin-bottom: 0;
     color: var(--white);
 }
 
@@ -149,9 +157,11 @@
     background: var(--gradient-primary);
     border-radius: var(--radius-xl);
     padding: var(--space-5);
-    margin-bottom: var(--space-6);
+    margin-bottom: 0;
     color: var(--white);
 }
+
+
 
 .summary-content {
     display: flex;
@@ -294,6 +304,10 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
     .count-controls {
         flex-direction: column;
         align-items: stretch;
