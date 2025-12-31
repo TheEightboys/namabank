@@ -364,7 +364,7 @@ const PublicReportsPage = () => {
                     </Link>
                     <div className="header-content">
                         <div className="om-symbol">ॐ</div>
-                        <h1>Nama Bank Reports</h1>
+                        <h1>Namavruksha Reports</h1>
                         <p>Community devotion statistics and insights</p>
                     </div>
                 </div>
@@ -388,7 +388,7 @@ const PublicReportsPage = () => {
                         </div>
                         <div className="stat-card">
                             <div className="stat-value">{accountStats.length}</div>
-                            <div className="stat-label">Nama Banks</div>
+                            <div className="stat-label">Sankalpas</div>
                         </div>
                     </section>
 
@@ -448,7 +448,7 @@ const PublicReportsPage = () => {
                             <table className="table">
                                 <thead>
                                     <tr>
-                                        <th>Nama Bank</th><th>Today</th><th>This Week</th>
+                                        <th>Sankalpa</th><th>Today</th><th>This Week</th>
                                         <th>This Month</th><th>This Year</th><th>Overall</th>
                                     </tr>
                                 </thead>
@@ -476,7 +476,7 @@ const PublicReportsPage = () => {
                                 <thead>
                                     <tr>
                                         <th>Devotee</th>
-                                        <th>Nama Bank</th>
+                                        <th>Sankalpa</th>
                                         <th>Count</th>
                                         <th>Period (Start - End)</th>
                                         <th>Type</th>

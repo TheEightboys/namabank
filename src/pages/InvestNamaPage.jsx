@@ -187,8 +187,8 @@ const InvestNamaPage = () => {
                                     <line x1="12" y1="16" x2="12.01" y2="16" />
                                 </svg>
                             </div>
-                            <p className="empty-state-title">No Nama Banks Linked</p>
-                            <p className="empty-state-text">Contact admin to link your account to a Nama Bank.</p>
+                            <p className="empty-state-title">No Sankalpas Linked</p>
+                            <p className="empty-state-text">Contact admin to link your account to a Namavruksha Sankalpa.</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="invest-form">

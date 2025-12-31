@@ -124,7 +124,7 @@ const ReportsPage = () => {
                                             <thead>
                                                 <tr>
                                                     <th>Entry Date</th>
-                                                    <th>Nama Bank</th>
+                                                    <th>Sankalpa</th>
                                                     <th>Count</th>
                                                     <th>Period (Start - End)</th>
                                                     <th>Type</th>

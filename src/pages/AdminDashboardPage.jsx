@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -23,7 +23,8 @@ import {
     getPendingUserDeletionRequests,
     approveUserDeletion,
     rejectUserDeletion,
-    deleteNamaAccount
+    deleteNamaAccount,
+    updateBook
 } from '../services/namaService';
 import { databases, storage, ID, Query, DATABASE_ID, COLLECTIONS, MEDIA_BUCKET_ID } from '../appwriteClient';
 import ExcelUpload from '../components/ExcelUpload';
@@ -32,11 +33,16 @@ import AudioUpload from '../components/AudioUpload';
 import BookUpload from '../components/BookUpload';
 import '../components/ExcelUpload.css';
 import './AdminDashboardPage.css';
+import * as XLSX from 'xlsx';
 
 const AdminDashboardPage = () => {
     const { isAdmin, logout } = useAuth();
     const { success, error } = useToast();
     const navigate = useNavigate();
+
+    // Audio player ref
+    const audioRef = React.useRef(null);
+    const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
 
     const [activeTab, setActiveTab] = useState('accounts');
     const [loading, setLoading] = useState(true);
@@ -78,6 +84,11 @@ const AdminDashboardPage = () => {
 
     // Bulk upload modal state
     const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+
+    // Book Edit Modal
+    const [showBookEditModal, setShowBookEditModal] = useState(false);
+    const [editingBook, setEditingBook] = useState(null);
+    const [bookTitle, setBookTitle] = useState('');
 
     useEffect(() => {
         if (!isAdmin) {
@@ -518,6 +529,74 @@ const AdminDashboardPage = () => {
 
     const formatNumber = (num) => num?.toLocaleString() || '0';
 
+    // Audio player controls
+    const handlePlayAudio = (audio) => {
+        if (currentlyPlaying === audio.id) {
+            // Toggle pause/play
+            if (audioRef.current.paused) {
+                audioRef.current.play();
+            } else {
+                audioRef.current.pause();
+            }
+        } else {
+            // Play new audio
+            const fileUrl = `https://cloud.appwrite.io/v1/storage/buckets/${MEDIA_BUCKET_ID}/files/${audio.id}/view?project=682de53c003c04cdaeda`;
+            if (audioRef.current) {
+                audioRef.current.src = fileUrl;
+                audioRef.current.play();
+                setCurrentlyPlaying(audio.id);
+            }
+        }
+    };
+
+    const handleStopAudio = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            setCurrentlyPlaying(null);
+        }
+    };
+
+    // Export users to Excel
+    const handleExportUsersToExcel = (count = 'all') => {
+        let usersToExport = users;
+        if (count !== 'all') {
+            usersToExport = users.slice(0, parseInt(count));
+        }
+
+        const exportData = usersToExport.map((user, index) => ({
+            'S.No': index + 1,
+            'Name': user.name,
+            'WhatsApp': user.whatsapp || '',
+            'Email': user.email || '',
+            'City': user.city || '',
+            'State': user.state || '',
+            'Country': user.country || '',
+            'Status': user.is_active ? 'Active' : 'Disabled',
+            'Joined': formatDate(user.created_at)
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 5 },   // S.No
+            { wch: 25 },  // Name
+            { wch: 15 },  // WhatsApp
+            { wch: 25 },  // Email
+            { wch: 15 },  // City
+            { wch: 15 },  // State
+            { wch: 15 },  // Country
+            { wch: 10 },  // Status
+            { wch: 15 }   // Joined
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Users');
+        XLSX.writeFile(wb, `namavruksha_users_${count === 'all' ? 'all' : count}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        success(`Exported ${usersToExport.length} users to Excel!`);
+    };
+
     if (!isAdmin) return null;
 
     return (
@@ -532,7 +611,7 @@ const AdminDashboardPage = () => {
                                 </svg>
                                 Admin
                             </span>
-                            <h1>Nama Bank Admin</h1>
+                            <h1>Namavruksha Admin</h1>
                         </div>
                         <button onClick={handleLogout} className="btn btn-ghost">
                             Logout
@@ -638,7 +717,7 @@ const AdminDashboardPage = () => {
                             {activeTab === 'accounts' && (
                                 <section className="admin-section">
                                     <div className="section-header">
-                                        <h2>Nama Bank Accounts</h2>
+                                        <h2>Namavruksha Sankalpas</h2>
                                         <button
                                             className="btn btn-primary"
                                             onClick={() => {
@@ -807,7 +886,39 @@ const AdminDashboardPage = () => {
                                 <section className="admin-section">
                                     <div className="section-header">
                                         <h2>Registered Users ({users.length})</h2>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            {/* Export Excel Buttons */}
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: '#f0f0f0', padding: '4px 8px', borderRadius: '6px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#666' }}>📊 Export:</span>
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => handleExportUsersToExcel(10)}
+                                                    style={{ background: '#22c55e', color: 'white', padding: '4px 10px', fontSize: '0.8rem' }}
+                                                >
+                                                    10
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => handleExportUsersToExcel(20)}
+                                                    style={{ background: '#22c55e', color: 'white', padding: '4px 10px', fontSize: '0.8rem' }}
+                                                >
+                                                    20
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => handleExportUsersToExcel(50)}
+                                                    style={{ background: '#22c55e', color: 'white', padding: '4px 10px', fontSize: '0.8rem' }}
+                                                >
+                                                    50
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => handleExportUsersToExcel('all')}
+                                                    style={{ background: '#16a34a', color: 'white', padding: '4px 10px', fontSize: '0.8rem' }}
+                                                >
+                                                    All
+                                                </button>
+                                            </div>
                                             {selectedUserIds.length > 0 && (
                                                 <button
                                                     className="btn btn-danger"
@@ -1126,7 +1237,7 @@ const AdminDashboardPage = () => {
                                                             <tr key={book.id}>
                                                                 <td>
                                                                     <strong>{book.title}</strong><br />
-                                                                    <Link to={`/books/${book.id}`} className="text-sm link" style={{ color: 'var(--primary)' }}>
+                                                                    <Link to={`/books/${book.id}`} target="_blank" className="text-sm link" style={{ color: 'var(--primary)' }}>
                                                                         📖 Read as Flipbook
                                                                     </Link>
                                                                 </td>
@@ -1142,6 +1253,16 @@ const AdminDashboardPage = () => {
                                                                         >
                                                                             Download
                                                                         </a>
+                                                                        <button
+                                                                            className="btn btn-sm btn-ghost"
+                                                                            onClick={() => {
+                                                                                setEditingBook(book);
+                                                                                setBookTitle(book.title);
+                                                                                setShowBookEditModal(true);
+                                                                            }}
+                                                                        >
+                                                                            Edit
+                                                                        </button>
                                                                         <button
                                                                             className="btn btn-sm btn-ghost btn-danger"
                                                                             onClick={() => handleDeleteBook(book)}
@@ -1185,10 +1306,33 @@ const AdminDashboardPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Hidden Audio Element for Playback */}
+                                    <audio ref={audioRef} onEnded={() => setCurrentlyPlaying(null)} style={{ display: 'none' }} />
+
                                     {/* Audio Files Management */}
                                     <div style={{ marginTop: '2rem' }}>
-                                        <h3 style={{ marginBottom: '1rem', color: '#333' }}>
+                                        <h3 style={{ marginBottom: '1rem', color: '#333', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             🎵 Uploaded Audio Files ({audioFiles.length})
+                                            {currentlyPlaying && (
+                                                <button
+                                                    onClick={handleStopAudio}
+                                                    style={{
+                                                        marginLeft: '1rem',
+                                                        background: '#ef4444',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.85rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                    }}
+                                                >
+                                                    ⏹️ Stop Playing
+                                                </button>
+                                            )}
                                         </h3>
                                         {audioFiles.length === 0 ? (
                                             <p style={{ color: '#666', padding: '1rem', background: '#f9f9f9', borderRadius: '8px' }}>
@@ -1204,16 +1348,44 @@ const AdminDashboardPage = () => {
                                                             alignItems: 'center',
                                                             justifyContent: 'space-between',
                                                             padding: '1rem',
-                                                            background: '#fff',
-                                                            border: '1px solid #e0e0e0',
+                                                            background: currentlyPlaying === audio.id ? 'linear-gradient(135deg, #fff3e0 0%, #fff9f0 100%)' : '#fff',
+                                                            border: currentlyPlaying === audio.id ? '2px solid #FF9933' : '1px solid #e0e0e0',
                                                             borderRadius: '8px',
-                                                            borderLeft: audio.isNamaJapa ? '4px solid #FF9933' : '4px solid #4CAF50'
+                                                            borderLeft: audio.isNamaJapa ? '4px solid #FF9933' : '4px solid #4CAF50',
+                                                            transition: 'all 0.3s ease'
                                                         }}
                                                     >
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                            <span style={{ fontSize: '1.5rem' }}>🎵</span>
+                                                            {/* Play/Pause Button */}
+                                                            <button
+                                                                onClick={() => handlePlayAudio(audio)}
+                                                                style={{
+                                                                    width: '48px',
+                                                                    height: '48px',
+                                                                    borderRadius: '50%',
+                                                                    border: 'none',
+                                                                    background: currentlyPlaying === audio.id ? 'linear-gradient(135deg, #FF9933 0%, #FF6600 100%)' : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                                                                    color: 'white',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontSize: '1.2rem',
+                                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                    transition: 'transform 0.2s ease'
+                                                                }}
+                                                                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                            >
+                                                                {currentlyPlaying === audio.id ? '⏸️' : '▶️'}
+                                                            </button>
                                                             <div>
-                                                                <div style={{ fontWeight: 'bold', color: '#333' }}>{audio.title}</div>
+                                                                <div style={{ fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    {audio.title}
+                                                                    {currentlyPlaying === audio.id && (
+                                                                        <span style={{ color: '#FF9933', fontSize: '0.85rem' }}>🔊 Playing</span>
+                                                                    )}
+                                                                </div>
                                                                 <div style={{ fontSize: '0.8rem', color: '#666' }}>
                                                                     <span style={{
                                                                         display: 'inline-block',
@@ -1284,7 +1456,7 @@ const AdminDashboardPage = () => {
                                     value={accountName}
                                     onChange={e => setAccountName(e.target.value)}
                                     className="form-input"
-                                    placeholder="e.g., Chennai Nama Bank"
+                                    placeholder="e.g., Chennai Namavruksha"
                                     autoFocus
                                 />
                             </div>
@@ -1394,7 +1566,7 @@ const AdminDashboardPage = () => {
                             </button>
                         </div>
                         <div className="modal-body">
-                            <p className="modal-description">Select Nama Bank accounts to allocate:</p>
+                            <p className="modal-description">Select Namavruksha Sankalpas to allocate:</p>
                             <div className="checkbox-group">
                                 {accounts.filter(acc => acc.is_active).map(account => (
                                     <label key={account.id} className="checkbox-item">
@@ -1435,6 +1607,55 @@ const AdminDashboardPage = () => {
                             onClose={() => setShowBulkUploadModal(false)}
                             accounts={accounts}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Book Modal */}
+            {showBookEditModal && (
+                <div className="modal-overlay" onClick={() => setShowBookEditModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">Edit Book Title</h3>
+                            <button className="modal-close" onClick={() => setShowBookEditModal(false)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label className="form-label">Book Title</label>
+                                <input
+                                    type="text"
+                                    value={bookTitle}
+                                    onChange={e => setBookTitle(e.target.value)}
+                                    className="form-input"
+                                    placeholder="Enter book title"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setShowBookEditModal(false)}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-primary" onClick={async () => {
+                                if (!bookTitle.trim()) return;
+                                try {
+                                    await updateBook(editingBook.id, { title: bookTitle });
+                                    success('Book title updated successfully!');
+                                    setShowBookEditModal(false);
+                                    loadData();
+                                } catch (err) {
+                                    error('Failed to update book title');
+                                    console.error(err);
+                                }
+                            }}>
+                                Save Changes
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

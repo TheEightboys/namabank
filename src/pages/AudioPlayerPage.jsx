@@ -23,6 +23,10 @@ const AudioPlayerPage = () => {
     const [namaCount, setNamaCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
+    // Mode Selection State
+    const [inputMode, setInputMode] = useState('nama'); // 'nama' or 'minutes'
+    const [minutes, setMinutes] = useState(0);
+
     // Submission state
     const [selectedAccount, setSelectedAccount] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -40,15 +44,12 @@ const AudioPlayerPage = () => {
         if (linkedAccounts.length > 0 && !selectedAccount) {
             setSelectedAccount(linkedAccounts[0].id);
         }
-
-        // Fetch audio files from Appwrite Storage
         fetchAudioFiles();
     }, [user, linkedAccounts, navigate, selectedAccount]);
 
     const fetchAudioFiles = async () => {
         try {
             const response = await storage.listFiles(MEDIA_BUCKET_ID);
-            // Filter to only include audio files (by extension)
             const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
             const audioFilesFiltered = response.files.filter(file =>
                 audioExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
@@ -60,13 +61,11 @@ const AudioPlayerPage = () => {
                     title: file.name.replace(/\.[^/.]+$/, '').replace('NamaJapa_', '').replace(/_/g, ' '),
                     src: storage.getFileView(MEDIA_BUCKET_ID, file.$id),
                     isNamaJapa: isNamaJapa,
-                    maxLoops: isNamaJapa ? 4 : 1 // NamaJapa loops 4 times, normal plays once
+                    maxLoops: isNamaJapa ? 4 : 1
                 };
             });
             setAudioFiles(files);
-            if (files.length > 0) {
-                setSelectedAudio(files[0]);
-            }
+            if (files.length > 0) setSelectedAudio(files[0]);
         } catch (err) {
             console.error('Error fetching audio files:', err);
             setAudioFiles([]);
@@ -84,57 +83,36 @@ const AudioPlayerPage = () => {
         };
     }, []);
 
-    // Use refs to track current state for event handlers (avoid closure issues)
+    // Refs for event handlers
     const loopCountRef = useRef(0);
     const maxLoopsRef = useRef(1);
     const isPlayingRef = useRef(false);
 
-    // Keep refs in sync
-    useEffect(() => {
-        loopCountRef.current = loopCount;
-    }, [loopCount]);
+    useEffect(() => { loopCountRef.current = loopCount; }, [loopCount]);
+    useEffect(() => { maxLoopsRef.current = selectedAudio?.maxLoops || 1; }, [selectedAudio]);
+    useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-    useEffect(() => {
-        maxLoopsRef.current = selectedAudio?.maxLoops || 1;
-    }, [selectedAudio]);
+    // Handle Audio Ended
+    const handleAudioEnded = () => {
+        console.log('Audio ended - current loop:', loopCountRef.current, 'max:', maxLoopsRef.current);
+        const newCount = loopCountRef.current + 1;
+        setLoopCount(newCount);
 
-    useEffect(() => {
-        isPlayingRef.current = isPlaying;
-    }, [isPlaying]);
-
-    // Attach ended event listener to audio element
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-
-        const handleEnded = () => {
-            console.log('Audio ended - current loop:', loopCountRef.current, 'max:', maxLoopsRef.current);
-            const newCount = loopCountRef.current + 1;
-            setLoopCount(newCount);
+        if (inputMode === 'nama') {
             setNamaCount(prev => prev + 4);
+        }
 
-            // Check if we should continue looping
-            if (newCount >= maxLoopsRef.current) {
-                // Stop after reaching max loops
-                console.log('Max loops reached, stopping');
-                setIsPlaying(false);
-                setIsPaused(false);
-            } else {
-                // Continue looping if not at max
-                if (isPlayingRef.current) {
-                    audio.currentTime = 0;
-                    audio.play().catch(err => console.log('Replay failed:', err));
-                }
+        if (newCount >= maxLoopsRef.current) {
+            setIsPlaying(false);
+            setIsPaused(false);
+        } else {
+            if (isPlayingRef.current && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(err => console.log('Replay failed:', err));
             }
-        };
+        }
+    };
 
-        audio.addEventListener('ended', handleEnded);
-        return () => {
-            audio.removeEventListener('ended', handleEnded);
-        };
-    }, []);
-
-    // Stop simulation
     const stopSimulation = () => {
         if (simulationRef.current) {
             clearInterval(simulationRef.current);
@@ -143,24 +121,20 @@ const AudioPlayerPage = () => {
     };
 
     const handlePlay = (audio) => {
-        // Reset if switching audio
         if (selectedAudio?.id !== audio.id) {
             setLoopCount(0);
-            setNamaCount(0);
+            if (inputMode === 'nama') setNamaCount(0);
         }
-
         setSelectedAudio(audio);
         setIsPlaying(true);
         setIsPaused(false);
 
-        // Use setTimeout to ensure state is updated before playing
         setTimeout(() => {
             if (audioRef.current) {
                 audioRef.current.src = audio.src;
-                audioRef.current.load(); // Preload audio
+                audioRef.current.load();
                 audioRef.current.play().catch(err => {
                     console.error('Audio play failed:', err);
-                    // Don't use simulation - it causes double counting
                 });
             }
         }, 100);
@@ -179,9 +153,7 @@ const AudioPlayerPage = () => {
         setIsPlaying(true);
         setIsPaused(false);
         if (audioRef.current) {
-            audioRef.current.play().catch(() => {
-                startSimulation();
-            });
+            audioRef.current.play().catch(() => { });
         }
     };
 
@@ -195,14 +167,34 @@ const AudioPlayerPage = () => {
         }
     };
 
+    const handleModeChange = (e) => {
+        const mode = e.target.value;
+        setInputMode(mode);
+        if (mode === 'nama') {
+            setMinutes(0);
+        } else {
+            setNamaCount(0);
+            handleStop();
+        }
+    };
+
+    const handleRevert = () => {
+        setInputMode('nama');
+        setNamaCount(0);
+        setMinutes(0);
+        handleStop();
+    };
+
     const handleSubmit = async () => {
         if (!selectedAccount) {
-            error('Please select a Nama Bank account.');
+            error('Please select a Namavruksha Sankalpa.');
             return;
         }
 
-        if (namaCount === 0) {
-            error('No Namas to submit. Play audio first.');
+        const valueToSubmit = inputMode === 'nama' ? namaCount : minutes;
+
+        if (valueToSubmit <= 0) {
+            error(`Please enter valid ${inputMode === 'nama' ? 'Namas' : 'Minutes'} to submit.`);
             return;
         }
 
@@ -210,11 +202,14 @@ const AudioPlayerPage = () => {
         handleStop();
 
         try {
-            await submitNamaEntry(user.id || user.$id, selectedAccount, namaCount, 'audio');
-            success(`${namaCount} Namas submitted via Audio! Hari Om 🙏`);
+            const type = inputMode === 'nama' ? 'audio' : 'minutes';
+            await submitNamaEntry(user.id || user.$id, selectedAccount, valueToSubmit, type);
+            success(`${valueToSubmit} ${inputMode === 'nama' ? 'Namas' : 'Minutes'} submitted! Hari Om 🙏`);
             setLoopCount(0);
             setNamaCount(0);
+            setMinutes(0);
         } catch (err) {
+            console.error('Submit error:', err);
             error('Failed to submit. Please try again.');
         } finally {
             setSubmitting(false);
@@ -234,17 +229,75 @@ const AudioPlayerPage = () => {
                         </svg>
                         Dashboard
                     </Link>
-                    <h1>Nama Audio</h1>
+                    <h1>ॐ ॐ ॐ Nama Audio</h1>
                     <p>Play & Auto Count - Chant along with the audio</p>
                 </div>
             </header>
 
             <main className="audio-main">
                 <div className="container">
+                    {/* Mode Selection UI */}
+                    <div style={{
+                        background: 'white',
+                        padding: '1rem',
+                        borderRadius: '12px',
+                        marginBottom: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '1.5rem'
+                    }}>
+                        <span style={{ fontWeight: '600', color: '#555' }}>Choose Input Mode:</span>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="inputMode"
+                                value="nama"
+                                checked={inputMode === 'nama'}
+                                onChange={handleModeChange}
+                                style={{ accentColor: '#FF9933', width: '18px', height: '18px' }}
+                            />
+                            <span style={{ fontSize: '1rem' }}>Nama Count (Auto)</span>
+                        </label>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="inputMode"
+                                value="minutes"
+                                checked={inputMode === 'minutes'}
+                                onChange={handleModeChange}
+                                style={{ accentColor: '#4CAF50', width: '18px', height: '18px' }}
+                            />
+                            <span style={{ fontSize: '1rem' }}>Minutes (Manual)</span>
+                        </label>
+
+                        <button
+                            onClick={handleRevert}
+                            style={{
+                                marginLeft: 'auto',
+                                background: '#f5f5f5',
+                                border: '1px solid #ddd',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                fontSize: '0.85rem',
+                                color: '#666',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            Reset
+                        </button>
+                    </div>
+
                     <div className="audio-layout">
                         {/* Audio List with Tabs */}
                         <div className="audio-list-section">
-                            <h2>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M9 18V5l12-2v13" />
                                     <circle cx="6" cy="18" r="3" />
@@ -266,8 +319,7 @@ const AudioPlayerPage = () => {
                                         background: activeTab === 'namajapa' ? 'linear-gradient(135deg, #FF9933, #FF6600)' : '#f5f5f5',
                                         color: activeTab === 'namajapa' ? '#fff' : '#666',
                                         fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     🕉️ Nama Japa ({namaJapaAudio.length})
@@ -283,8 +335,7 @@ const AudioPlayerPage = () => {
                                         background: activeTab === 'normal' ? 'linear-gradient(135deg, #4CAF50, #2E7D32)' : '#f5f5f5',
                                         color: activeTab === 'normal' ? '#fff' : '#666',
                                         fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     🎧 Normal ({normalAudio.length})
@@ -307,10 +358,7 @@ const AudioPlayerPage = () => {
 
                             <div className="audio-list">
                                 {loading ? (
-                                    <div className="loading-audio">
-                                        <div className="loader-sm"></div>
-                                        <p>Loading audio files...</p>
-                                    </div>
+                                    <div className="loading-audio"><div className="loader-sm"></div><p>Loading audio...</p></div>
                                 ) : (activeTab === 'namajapa' ? namaJapaAudio : normalAudio).length === 0 ? (
                                     <p className="no-audio">No {activeTab === 'namajapa' ? 'Nama Japa' : 'normal'} audio files available.</p>
                                 ) : (
@@ -318,63 +366,72 @@ const AudioPlayerPage = () => {
                                         <div
                                             key={audio.id}
                                             className={`audio-item ${selectedAudio?.id === audio.id ? 'active' : ''} ${selectedAudio?.id === audio.id && isPlaying ? 'playing' : ''}`}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '1rem',
+                                                marginBottom: '0.75rem',
+                                                background: selectedAudio?.id === audio.id ? '#FFF8E1' : 'white',
+                                                borderRadius: '10px',
+                                                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                                                border: selectedAudio?.id === audio.id ? '1px solid #FF9933' : '1px solid #eee'
+                                            }}
                                         >
-                                            <div className="audio-item-info">
-                                                <span className="audio-number">{index + 1}</span>
-                                                <span className="audio-title">{audio.title}</span>
-                                                <span className="audio-type-badge" style={{
-                                                    fontSize: '0.7rem',
-                                                    padding: '2px 6px',
-                                                    borderRadius: '10px',
-                                                    background: audio.isNamaJapa ? 'rgba(255,153,51,0.2)' : 'rgba(76,175,80,0.2)',
-                                                    color: audio.isNamaJapa ? '#FF6600' : '#2E7D32',
-                                                    marginLeft: '8px'
-                                                }}>
-                                                    {audio.isNamaJapa ? '🔁 4x Loop' : '▶️ Once'}
-                                                </span>
+                                            <div className="audio-item-info" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                                                <span className="audio-number" style={{
+                                                    minWidth: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    background: '#eee', borderRadius: '50%', fontSize: '0.8rem', fontWeight: 'bold'
+                                                }}>{index + 1}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span className="audio-title" style={{ fontWeight: '600' }}>{audio.title}</span>
+                                                    <span className="audio-type-badge" style={{ fontSize: '0.7rem', color: audio.isNamaJapa ? '#FF6600' : '#2E7D32', marginTop: '2px' }}>
+                                                        {audio.isNamaJapa ? '🔁 4x Loop' : '▶️ Plays Once'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="audio-item-controls">
-                                                {/* Play Button */}
+
+                                            <div className="audio-item-controls" style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <button
-                                                    className={`control-btn play-btn ${selectedAudio?.id === audio.id && isPlaying ? 'disabled' : ''}`}
                                                     onClick={() => {
-                                                        if (selectedAudio?.id === audio.id && isPaused) {
-                                                            handleResume();
-                                                        } else {
-                                                            handlePlay(audio);
-                                                        }
+                                                        if (selectedAudio?.id === audio.id && isPaused) handleResume();
+                                                        else handlePlay(audio);
                                                     }}
                                                     disabled={selectedAudio?.id === audio.id && isPlaying}
                                                     title="Play"
+                                                    style={{
+                                                        width: '36px', height: '36px', borderRadius: '50%', border: 'none',
+                                                        background: selectedAudio?.id === audio.id && isPlaying ? '#ccc' : '#4CAF50',
+                                                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                                    }}
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                        <polygon points="5 3 19 12 5 21 5 3" />
-                                                    </svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                                                 </button>
-
-                                                {/* Pause Button */}
                                                 <button
-                                                    className={`control-btn pause-btn ${!(selectedAudio?.id === audio.id && isPlaying) ? 'disabled' : ''}`}
                                                     onClick={handlePause}
                                                     disabled={!(selectedAudio?.id === audio.id && isPlaying)}
                                                     title="Pause"
+                                                    style={{
+                                                        width: '36px', height: '36px', borderRadius: '50%', border: 'none',
+                                                        background: !(selectedAudio?.id === audio.id && isPlaying) ? '#eee' : '#FF9933',
+                                                        color: !(selectedAudio?.id === audio.id && isPlaying) ? '#aaa' : 'white',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                                    }}
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                        <rect x="6" y="4" width="4" height="16" />
-                                                        <rect x="14" y="4" width="4" height="16" />
-                                                    </svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
                                                 </button>
-
-                                                {/* Stop Button */}
                                                 <button
-                                                    className={`control-btn stop-btn ${!(selectedAudio?.id === audio.id && (isPlaying || isPaused)) ? 'disabled' : ''}`}
                                                     onClick={handleStop}
                                                     disabled={!(selectedAudio?.id === audio.id && (isPlaying || isPaused))}
                                                     title="Stop"
+                                                    style={{
+                                                        width: '36px', height: '36px', borderRadius: '50%', border: 'none',
+                                                        background: !(selectedAudio?.id === audio.id && (isPlaying || isPaused)) ? '#eee' : '#ef4444',
+                                                        color: !(selectedAudio?.id === audio.id && (isPlaying || isPaused)) ? '#aaa' : 'white',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                                    }}
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                        <rect x="6" y="6" width="12" height="12" />
-                                                    </svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" /></svg>
                                                 </button>
                                             </div>
                                         </div>
@@ -383,105 +440,73 @@ const AudioPlayerPage = () => {
                             </div>
                         </div>
 
-                        {/* Counter & Submit Section */}
+                        {/* Counter Section */}
                         <div className="counter-section">
-                            {/* Currently Playing */}
-                            <div className="now-playing">
-                                <span className="now-playing-label">NOW PLAYING</span>
-                                <span className="now-playing-title">{selectedAudio?.title || 'Select an audio'}</span>
-                                {isPlaying && (
-                                    <div className="playing-indicator">
-                                        <span className="bar"></span>
-                                        <span className="bar"></span>
-                                        <span className="bar"></span>
-                                        <span className="bar"></span>
-                                    </div>
-                                )}
-                                {isPaused && <span className="paused-badge">PAUSED</span>}
-                            </div>
-
-                            {/* Live Counter */}
-                            <div className="live-counter">
-                                <div className="counter-display">
-                                    <div className="counter-value">{namaCount}</div>
-                                    <div className="counter-label">Namas Counted</div>
-                                </div>
-                                <div className="loop-info">
-                                    <span className="loop-count">
-                                        {selectedAudio?.isNamaJapa
-                                            ? `${loopCount} of ${selectedAudio?.maxLoops} loops`
-                                            : `${loopCount} time(s) played`
-                                        }
-                                    </span>
-                                    <span className="loop-note">
-                                        {selectedAudio?.isNamaJapa
-                                            ? '+4 Namas per loop • Loops 4x'
-                                            : '+4 Namas • Plays once'
-                                        }
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Account Selector */}
-                            <div className="account-selector">
-                                <label className="form-label">Select Nama Bank Account</label>
+                            <div className="account-selector" style={{ marginBottom: '1.5rem' }}>
+                                <label className="form-label">Select Sankalpa</label>
                                 <select
                                     value={selectedAccount}
                                     onChange={(e) => setSelectedAccount(e.target.value)}
                                     className="form-input form-select"
                                 >
                                     {linkedAccounts.map(account => (
-                                        <option key={account.id} value={account.id}>
-                                            {account.name}
-                                        </option>
+                                        <option key={account.id} value={account.id}>{account.name}</option>
                                     ))}
                                 </select>
                             </div>
 
-                            {/* Submit Button */}
+                            {inputMode === 'nama' ? (
+                                <>
+                                    <div className="now-playing">
+                                        <span className="now-playing-label">NOW PLAYING</span>
+                                        <span className="now-playing-title">{selectedAudio?.title || 'Select an audio to chant'}</span>
+                                        {isPlaying && <div className="playing-indicator"><span className="bar"></span><span className="bar"></span><span className="bar"></span></div>}
+                                        {isPaused && <span className="paused-badge">PAUSED</span>}
+                                    </div>
+                                    <div className="live-counter">
+                                        <div className="counter-display">
+                                            <div className="counter-value">{namaCount}</div>
+                                            <div className="counter-label">Namas Counted</div>
+                                        </div>
+                                        <div className="loop-info">
+                                            <span className="loop-count">{selectedAudio ? (selectedAudio.isNamaJapa ? `${loopCount} / 4 loops` : `${loopCount} plays`) : '-'}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ background: '#f0fff4', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #c6f6d5', textAlign: 'center' }}>
+                                    <label className="form-label" style={{ color: '#2E7D32', marginBottom: '0.5rem', display: 'block' }}>Enter Minutes Chanted</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                                        <input
+                                            type="number" min="0" value={minutes}
+                                            onChange={(e) => setMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                                            style={{ fontSize: '2rem', width: '120px', textAlign: 'center', padding: '0.5rem', borderRadius: '8px', border: '2px solid #4CAF50', outline: 'none', color: '#2E7D32', fontWeight: 'bold' }}
+                                        />
+                                        <span style={{ fontSize: '1.2rem', color: '#2E7D32' }}>Mins</span>
+                                    </div>
+                                </div>
+                            )}
+
                             <button
                                 className="btn btn-primary btn-lg w-full"
                                 onClick={handleSubmit}
-                                disabled={submitting || namaCount === 0}
+                                disabled={submitting || (inputMode === 'nama' ? namaCount === 0 : minutes === 0)}
+                                style={{ marginTop: '1rem' }}
                             >
-                                {submitting ? (
-                                    <>
-                                        <span className="loader loader-sm"></span>
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                            <polyline points="22 4 12 14.01 9 11.01" />
-                                        </svg>
-                                        Submit {namaCount} Namas
-                                    </>
-                                )}
+                                {submitting ? 'Submitting...' : `Submit ${inputMode === 'nama' ? namaCount + ' Namas' : minutes + ' Minutes'}`}
                             </button>
 
-                            {/* Info Note */}
-                            <div className="audio-info">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                </svg>
-                                <p>Audio loops continuously. Each loop adds <strong>+4</strong> to your count. Stop when done and submit!</p>
-                            </div>
+                            {inputMode === 'nama' && (
+                                <div className="audio-info">
+                                    <p>Audio loops continuously. Each loop adds <strong>+4</strong> to your count. Stop & Submit when done!</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* Hidden audio element */}
-            <audio
-                ref={audioRef}
-                onEnded={handleAudioEnded}
-                loop={false}
-                crossOrigin="anonymous"
-                preload="auto"
-            />
+            <audio ref={audioRef} onEnded={handleAudioEnded} crossOrigin="anonymous" preload="auto" style={{ display: 'none' }} />
         </div>
     );
 };

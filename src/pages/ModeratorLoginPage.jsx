@@ -58,7 +58,7 @@ const ModeratorLoginPage = () => {
                             </svg>
                         </div>
                         <h1>Moderator Login</h1>
-                        <p>Access moderator dashboard to manage Nama Bank accounts</p>
+                        <p>Access moderator dashboard to manage Namavruksha Sankalpas</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="moderator-login-form">

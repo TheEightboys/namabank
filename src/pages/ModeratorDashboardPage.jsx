@@ -612,7 +612,7 @@ const ModeratorDashboardPage = () => {
         // Title
         doc.setFontSize(22);
         doc.setTextColor(255, 153, 51); // saffron
-        doc.text('Nama Bank - Moderator Report', pageWidth / 2, 20, { align: 'center' });
+        doc.text('Namavruksha - Moderator Report', pageWidth / 2, 20, { align: 'center' });
 
         doc.setFontSize(10);
         doc.setTextColor(100);
@@ -706,7 +706,7 @@ const ModeratorDashboardPage = () => {
                 newAccountData.end_date || null,
                 newAccountData.target_goal ? parseInt(newAccountData.target_goal) : null
             );
-            success('Nama Bank account created successfully!');
+            success('Namavruksha Sankalpa created successfully!');
             setNewAccountData({ name: '', start_date: '', end_date: '', target_goal: '' });
             setShowAddModal(false);
             loadData();
@@ -781,7 +781,7 @@ const ModeratorDashboardPage = () => {
                             className={`tab-btn ${activeTab === 'accounts' ? 'active' : ''}`}
                             onClick={() => setActiveTab('accounts')}
                         >
-                            Nama Bank Accounts
+                            Namavruksha Sankalpas
                         </button>
                         <button
                             className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
@@ -809,11 +809,11 @@ const ModeratorDashboardPage = () => {
                         </button>
                     </div>
 
-                    {/* Nama Bank Accounts Tab */}
+                    {/* Namavruksha Sankalpas Tab */}
                     {activeTab === 'accounts' && (
                         <section className="accounts-section">
                             <div className="section-header">
-                                <h2>Nama Bank Accounts</h2>
+                                <h2>Namavruksha Sankalpas</h2>
                                 <button
                                     className="btn btn-primary"
                                     onClick={() => setShowAddModal(true)}
@@ -833,7 +833,7 @@ const ModeratorDashboardPage = () => {
                                 </div>
                             ) : accounts.length === 0 ? (
                                 <div className="empty-state">
-                                    <p>No Nama Bank accounts yet. Create one to get started!</p>
+                                    <p>No Namavruksha Sankalpas yet. Create one to get started!</p>
                                 </div>
                             ) : (
                                 <div className="accounts-grid">
@@ -1221,7 +1221,7 @@ const ModeratorDashboardPage = () => {
                                 <table className="users-table">
                                     <thead>
                                         <tr>
-                                            <th>Nama Bank</th>
+                                            <th>Sankalpa</th>
                                             <th>Today</th>
                                             <th>This Week</th>
                                             <th>This Month</th>
@@ -1314,7 +1314,7 @@ const ModeratorDashboardPage = () => {
                     <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
                         <div className="modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
-                                <h2>Add New Nama Bank Account</h2>
+                                <h2>Add New Namavruksha Sankalpa</h2>
                                 <button className="modal-close" onClick={() => setShowAddModal(false)}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -1331,7 +1331,7 @@ const ModeratorDashboardPage = () => {
                                             value={newAccountData.name}
                                             onChange={(e) => setNewAccountData(prev => ({ ...prev, name: e.target.value }))}
                                             className="form-input"
-                                            placeholder="e.g., Vizag Nama Bank"
+                                            placeholder="e.g., Vizag Namavruksha"
                                             autoFocus
                                         />
                                     </div>
@@ -1431,7 +1431,7 @@ const ModeratorDashboardPage = () => {
                                             onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
                                             className="form-input"
                                             rows="3"
-                                            placeholder="Enter a description for this Nama Bank..."
+                                            placeholder="Enter a description for this Sankalpa..."
                                         />
                                     </div>
                                 </div>
@@ -1472,7 +1472,7 @@ const ModeratorDashboardPage = () => {
                                 </button>
                             </div>
                             <div className="modal-body">
-                                <p className="modal-description">Select Nama Bank accounts to allocate:</p>
+                                <p className="modal-description">Select Namavruksha Sankalpas to allocate:</p>
                                 <div className="checkbox-group">
                                     {accounts.filter(acc => acc.is_active).map(account => (
                                         <label key={account.id} className="checkbox-item">

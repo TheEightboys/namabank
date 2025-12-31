@@ -228,7 +228,7 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
                     </div>
 
                     <div className="default-accounts-section">
-                        <h4>Assign to Nama Banks (optional)</h4>
+                        <h4>Assign to Namavruksha Sankalpas (optional)</h4>
                         <div className="checkbox-group">
                             {accounts.filter(acc => acc.is_active).map(account => (
                                 <label key={account.id} className="checkbox-item">

@@ -81,10 +81,11 @@ const LandingPage = () => {
             <div className="animated-bg">
                 <div className="floating-om om-1">ॐ</div>
                 <div className="floating-om om-2">ॐ</div>
+                <div className="floating-om om-3">ॐ</div>
             </div>
 
             <div className="landing-container">
-                {/* Hero Section - Compact */}
+                {/* Hero Section */}
                 <header className="hero-section">
                     <div className="om-symbol">ॐ</div>
                     <h1 className="hero-title">
@@ -93,61 +94,117 @@ const LandingPage = () => {
                     </h1>
                     <p className="hero-tagline">The Divine Tree of the Holy Name</p>
                     <p className="hero-meaning">
-                        Just as a tree grows silently yet sustains life, <strong>Nama grows within us and sustains the soul beyond this life.</strong>
+                        <em>Namavruksha means "The Tree of the Divine Name."</em><br />
+                        Just as a tree grows silently yet sustains life,<br />
+                        <strong>Nama grows within us and sustains the soul beyond this life.</strong>
                     </p>
                     <div className="greeting-text">🙏 Yogi Ramsuratkumar Jaya Guru Raya! 🙏</div>
                 </header>
 
-                {/* Live Stats - Inline */}
+                {/* Introduction */}
+                <section className="intro-section">
+                    <p className="intro-text">
+                        Namavruksha is a humble digital space for devotees to nurture the Tree of Nama—
+                        by chanting, counting with sincerity, and offering Nama as a collective spiritual sankalpa.
+                    </p>
+                </section>
+
+                {/* Live Stats */}
                 <section className="stats-inline">
                     <div className="stat-item">
-                        <span className="stat-num">{formatNumber(liveStats.totalUsers)}</span>
+                        <span className="stat-num">{loading ? '...' : formatNumber(liveStats.totalUsers)}</span>
                         <span className="stat-lbl">Devotees</span>
                     </div>
                     <div className="stat-divider">•</div>
                     <div className="stat-item highlight">
-                        <span className="stat-num">{formatNumber(liveStats.totalNamaCount)}</span>
+                        <span className="stat-num">{loading ? '...' : formatNumber(liveStats.totalNamaCount)}</span>
                         <span className="stat-lbl">Nama Offered</span>
                     </div>
                     <div className="stat-divider">•</div>
                     <div className="stat-item">
-                        <span className="stat-num">{liveStats.activeAccounts}</span>
+                        <span className="stat-num">{loading ? '...' : liveStats.activeAccounts}</span>
                         <span className="stat-lbl">Sankalpas</span>
                     </div>
                 </section>
 
-                {/* Key Teachings - Compact Grid */}
-                <section className="teachings-compact">
-                    <div className="teaching-item">
+                {/* Teachings with Quotes */}
+                <section className="teachings-section">
+                    <div className="teaching-card">
                         <span className="teach-icon">🌱</span>
-                        <div>
-                            <strong>Why Chant?</strong>
-                            <p>Nama purifies the mind and prepares the soul for its journey. Only the Name remains when everything else falls away.</p>
+                        <h3>Why Chant the Divine Name?</h3>
+                        <p className="teaching-content">
+                            The Divine Name is not merely sound—it is living presence.
+                            Chanting Nama purifies the mind, softens the heart, and prepares the soul for its onward journey.
+                        </p>
+                        <div className="quote-box">
+                            <p className="quote-text">
+                                "Only the Name remains when everything else falls away. Nama is the simplest and highest refuge."
+                            </p>
+                            <p className="quote-author">— Yogi Ramsuratkumar</p>
                         </div>
                     </div>
-                    <div className="teaching-item">
+
+                    <div className="teaching-card">
                         <span className="teach-icon">🌿</span>
-                        <div>
-                            <strong>Why Count?</strong>
-                            <p>Not for comparison—but for discipline, continuity, and remembrance with awareness. Counting helps Nama take root.</p>
+                        <h3>Why Count Nama?</h3>
+                        <p className="teaching-content">
+                            Counting Nama is not for comparison. It is for discipline of the mind, continuity in practice, and remembrance with awareness.
+                        </p>
+                        <div className="quote-box">
+                            <p className="quote-text">
+                                "Nama Japa gains strength through nishta (steadfastness) and regularity. Counting helps Nama take root."
+                            </p>
+                            <p className="quote-author">— Sri Vittaldas Jayakrishna Deekshitar</p>
                         </div>
                     </div>
-                    <div className="teaching-item">
+
+                    <div className="teaching-card">
                         <span className="teach-icon">🌳</span>
-                        <div>
-                            <strong>Why Collectively?</strong>
-                            <p>A single leaf is small, but together they become a tree. When Nama is offered collectively, it uplifts all.</p>
+                        <h3>Why Offer Nama Collectively?</h3>
+                        <p className="teaching-content">
+                            A single leaf is small, but together they become a tree that gives shade to many.
+                            When Nama is offered towards a shared goal, even a small effort becomes part of a greater spiritual offering.
+                        </p>
+                        <div className="quote-box">
+                            <p className="quote-text">
+                                "When devotion is offered selflessly, it expands and uplifts all."
+                            </p>
+                            <p className="quote-author">— Sri Krishnapremi Swamigal</p>
                         </div>
                     </div>
                 </section>
 
-                {/* Living Metaphor - Inline */}
-                <section className="metaphor-inline">
-                    <div className="metaphor-item"><span>🌱</span> Nama = Seed</div>
-                    <div className="metaphor-item"><span>💧</span> Chanting = Watering</div>
-                    <div className="metaphor-item"><span>🏔️</span> Faith = Soil</div>
-                    <div className="metaphor-item"><span>🌿</span> Discipline = Root</div>
-                    <div className="metaphor-item"><span>🍎</span> Grace = Fruit</div>
+                {/* Living Metaphor */}
+                <section className="metaphor-section">
+                    <h3 className="metaphor-title">🌸 Namavruksha — The Living Metaphor</h3>
+                    <div className="quote-box featured">
+                        <p className="quote-text">
+                            "Nama itself is the seed, the path, and the fruit."
+                        </p>
+                        <p className="quote-author">— Guruji Sri Muralidhara Swamigal</p>
+                    </div>
+                    <div className="metaphor-inline">
+                        <div className="metaphor-item"><span>🌱</span> Nama = Seed</div>
+                        <div className="metaphor-item"><span>💧</span> Chanting = Watering</div>
+                        <div className="metaphor-item"><span>🏔️</span> Faith = Soil</div>
+                        <div className="metaphor-item"><span>🌿</span> Discipline = Root</div>
+                        <div className="metaphor-item"><span>🍎</span> Grace = Fruit</div>
+                    </div>
+                    <p className="metaphor-wisdom">The tree grows silently—yet its fruits follow the soul.</p>
+                </section>
+
+                {/* Nama-Nishta Section */}
+                <section className="nishta-section">
+                    <h3>🕉️ Nama-Nishta — The Only Abiding Wealth</h3>
+                    <div className="quote-box">
+                        <p className="quote-text">
+                            "When the mind becomes firmly established in Nama (Nama-nishta),
+                            it naturally withdraws from all that is transient and rests in the Eternal.
+                            All possessions remain here. All identities dissolve.
+                            Only a life rooted in Nama accompanies us beyond."
+                        </p>
+                        <p className="quote-author">— Sri Ramanacharanatirtha Nochur Venkataraman</p>
+                    </div>
                 </section>
 
                 {/* Action Cards */}
@@ -186,7 +243,17 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Media Links - Compact */}
+                {/* Humble Invitation */}
+                <section className="invitation-section">
+                    <h3>🌼 A Humble Invitation</h3>
+                    <p>
+                        Namavruksha does not compel practice.<br />
+                        It simply offers a space to record, remember, and offer Nama with sincerity.<br />
+                        <strong>If it resonates with you, come and water the Tree of Nama—one chant at a time.</strong>
+                    </p>
+                </section>
+
+                {/* Media Links */}
                 <section className="media-compact">
                     <Link to="/gallery" className="media-link">📷 Gallery</Link>
                     <Link to="/audios" className="media-link">🎵 Audio</Link>
@@ -194,10 +261,11 @@ const LandingPage = () => {
                     <Link to="/prayers" className="media-link">🙏 Prayers</Link>
                 </section>
 
-                {/* Quote & Footer */}
+                {/* Footer */}
                 <footer className="landing-footer">
                     <div className="footer-quote">
-                        🌳 <strong>Namavruksha</strong> — Rooted in Nama. Growing in Faith. Bearing Fruits Beyond Life.
+                        🌳 <strong>Namavruksha</strong><br />
+                        Rooted in Nama. Growing in Faith. Bearing Fruits Beyond Life.
                     </div>
                     <div className="admin-links">
                         <Link to="/moderator/login">Moderator</Link>

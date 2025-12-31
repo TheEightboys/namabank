@@ -8,10 +8,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const BookReaderPage = () => {
     const { id } = useParams();
@@ -82,6 +79,7 @@ const BookReaderPage = () => {
 
     const loadBook = async () => {
         try {
+            setLoading(true);
             const books = await getBooks();
             const found = books.find(b => b.id === id);
 
@@ -91,22 +89,25 @@ const BookReaderPage = () => {
 
                 // Fetch PDF as blob to bypass CORS
                 try {
+                    console.log("Fetching PDF from:", found.file_url);
                     const response = await fetch(found.file_url);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const blob = await response.blob();
                     const blobUrl = URL.createObjectURL(blob);
+                    console.log("PDF Blob created:", blobUrl);
                     setPdfBlobUrl(blobUrl);
-                } catch (pdfErr) {
-                    console.error('Error fetching PDF:', pdfErr);
-                    setPdfError('Failed to load PDF. Please try again later.');
+                } catch (err) {
+                    console.error("PDF Fetch Error:", err);
+                    setPdfError("Failed to load PDF file: " + err.message);
                 }
             } else {
-                navigate('/books');
+                setPdfError("Book not found in library");
             }
         } catch (err) {
-            console.error('Error loading book:', err);
+            console.error("Load Book Error:", err);
+            setPdfError("Failed to load book details");
         } finally {
             setLoading(false);
         }
@@ -196,6 +197,11 @@ const BookReaderPage = () => {
             console.error('Error getting PDF metadata:', e);
         }
     }, []);
+
+    const onDocumentLoadError = (error) => {
+        console.error("PDF Load Error:", error);
+        setPdfError("Failed to render PDF: " + error.message);
+    }
 
     const onFlip = useCallback((e) => {
         setCurrentPage(e.data);
@@ -308,36 +314,41 @@ const BookReaderPage = () => {
         };
 
         // Run after a slight delay to allow React PDF to render text layer
-        const timeoutId = setTimeout(highlightText, 100);
+        const timeoutId = setTimeout(highlightText, 500);
         return () => clearTimeout(timeoutId);
     }, [searchQuery, currentPage, scale, pdfDocument]);
 
-    if (loading) return <div className="reader-loading"><span className="loader"></span></div>;
-    if (!book) return null;
+    // Calculate initial scale to fit viewport ONLY if not already set or manually changed
+    useEffect(() => {
+        if (!pageDimensions.width) return;
 
-    // Calculate dimensions that fit within the viewport
-    const isMobile = window.innerWidth <= 768;
-    const toolbarHeight = isMobile ? 100 : 64;
-    const padding = isMobile ? 10 : 80;
+        const isMobile = window.innerWidth <= 768;
+        const toolbarHeight = isMobile ? 100 : 64;
+        const padding = isMobile ? 10 : 40;
 
-    const maxWidth = window.innerWidth - padding;
-    const maxHeight = window.innerHeight - toolbarHeight - padding;
+        const maxWidth = window.innerWidth - padding;
+        const maxHeight = window.innerHeight - toolbarHeight - padding;
 
-    // Calculate scaled dimensions while maintaining aspect ratio
-    let displayWidth = pageDimensions.width * scale;
-    let displayHeight = pageDimensions.height * scale;
-
-    // Fit to viewport if too large
-    if (displayWidth > maxWidth || displayHeight > maxHeight) {
-        const widthRatio = maxWidth / displayWidth;
-        const heightRatio = maxHeight / displayHeight;
+        // Calculate fit ratio
+        const widthRatio = maxWidth / pageDimensions.width;
+        const heightRatio = maxHeight / pageDimensions.height;
         const fitRatio = Math.min(widthRatio, heightRatio);
-        displayWidth = displayWidth * fitRatio;
-        displayHeight = displayHeight * fitRatio;
-    }
 
-    const currentWidth = Math.round(displayWidth);
-    const currentHeight = Math.round(displayHeight);
+        // Only set initial scale, don't override user zoom
+        if (scale === 1.0) {
+            setScale(fitRatio * 0.95); // 0.95 gives a little breathing room
+        }
+    }, [pageDimensions]);
+
+    if (loading) return <div className="reader-loading"><span className="loader"></span></div>;
+
+    if (!book && !pdfError) return <div className="pdf-error">Book not found</div>;
+
+    const isMobile = window.innerWidth <= 768;
+
+    // Calculate display dimensions based on CURRENT scale
+    const currentWidth = Math.round(pageDimensions.width * scale);
+    const currentHeight = Math.round(pageDimensions.height * scale);
 
     return (
         <div className="book-reader-page" ref={containerRef} onWheel={handleWheel}>
@@ -352,10 +363,12 @@ const BookReaderPage = () => {
                     </button>
                 </div>
 
-                <div className="book-title-mini">
-                    <strong>{book.title}</strong>
-                    <span>Page {currentPage + 1} of {numPages}</span>
-                </div>
+                {book && (
+                    <div className="book-title-mini">
+                        <strong>{book.title}</strong>
+                        <span>Page {currentPage + 1} of {numPages}</span>
+                    </div>
+                )}
 
                 <div className="toolbar-right">
                     <div className="search-container">
@@ -379,11 +392,11 @@ const BookReaderPage = () => {
                     </div>
 
                     <div className="zoom-controls">
-                        <button className="btn-icon" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
+                        <button className="btn-icon" onClick={() => setScale(s => Math.max(0.2, s - 0.1))}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
                         </button>
                         <span className="zoom-level">{Math.round(scale * 100)}%</span>
-                        <button className="btn-icon" onClick={() => setScale(s => Math.min(2.0, s + 0.1))}>
+                        <button className="btn-icon" onClick={() => setScale(s => Math.min(3.0, s + 0.1))}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                         </button>
                     </div>
@@ -418,55 +431,64 @@ const BookReaderPage = () => {
                     </aside>
                 )}
 
-                <div className="flipbook-wrapper">
+                <div className="flipbook-wrapper" style={{ overflow: 'auto' }}>
+
                     {pdfError ? (
                         <div className="pdf-error">{pdfError}</div>
                     ) : pdfBlobUrl ? (
                         <Document
                             file={pdfBlobUrl}
                             onLoadSuccess={onDocumentLoadSuccess}
-                            loading={<div className="loader"></div>}
+                            onLoadError={onDocumentLoadError}
+                            loading={<div className="loader">Loading PDF Document...</div>}
+                            error={<div className="pdf-error">Failed to load PDF data.</div>}
                         >
-                            <HTMLFlipBook
-                                width={currentWidth}
-                                height={currentHeight}
-                                startPage={currentPage}
-                                minWidth={315}
-                                maxWidth={1000}
-                                minHeight={400}
-                                maxHeight={1533}
-                                maxShadowOpacity={0.5}
-                                showCover={true}
-                                drawShadow={true}
-                                flippingTime={600}
-                                usePortrait={false}
-                                startZIndex={0}
-                                autoSize={false}
-                                clickEventForward={false}
-                                useMouseEvents={true}
-                                swipeDistance={50}
-                                showPageCorners={true}
-                                disableFlipByClick={false}
-                                mobileScrollSupport={true}
-                                onFlip={onFlip}
-                                className="nama-flipbook"
-                                ref={flipBookRef}
-                            >
-                                {Array.from(new Array(numPages), (el, index) => (
-                                    <div key={`page_${index + 1}`} className="page-content">
-                                        <Page
-                                            pageNumber={index + 1}
-                                            width={currentWidth}
-                                            renderTextLayer={true}
-                                            renderAnnotationLayer={true}
-                                        />
-                                        <div className="page-footer">{index + 1}</div>
-                                    </div>
-                                ))}
-                            </HTMLFlipBook>
+                            {numPages > 0 ? (
+                                <HTMLFlipBook
+                                    width={currentWidth}
+                                    height={currentHeight}
+                                    startPage={currentPage}
+                                    minWidth={100}
+                                    maxWidth={2000}
+                                    minHeight={100}
+                                    maxHeight={2500}
+                                    maxShadowOpacity={0.5}
+                                    showCover={true}
+                                    drawShadow={true}
+                                    flippingTime={600}
+                                    usePortrait={false}
+                                    startZIndex={0}
+                                    autoSize={true}
+                                    clickEventForward={true}
+                                    useMouseEvents={true}
+                                    swipeDistance={50}
+                                    showPageCorners={true}
+                                    disableFlipByClick={false}
+                                    mobileScrollSupport={true}
+                                    onFlip={onFlip}
+                                    className="nama-flipbook"
+                                    ref={flipBookRef}
+                                >
+                                    {Array.from(new Array(numPages), (el, index) => (
+                                        <div key={`page_${index + 1}`} className="page-content">
+                                            <Page
+                                                pageNumber={index + 1}
+                                                width={currentWidth}
+                                                height={currentHeight}
+                                                renderTextLayer={true}
+                                                renderAnnotationLayer={true}
+                                                error={<div>Error rendering page {index + 1}</div>}
+                                            />
+                                            <div className="page-footer">{index + 1}</div>
+                                        </div>
+                                    ))}
+                                </HTMLFlipBook>
+                            ) : (
+                                <div className="loader">Analyzing PDF Pages...</div>
+                            )}
                         </Document>
                     ) : (
-                        <div className="loader"></div>
+                        <div className="loader">Fetching Book File...</div>
                     )}
                 </div>
 

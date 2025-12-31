@@ -351,10 +351,10 @@ const RegisterPage = () => {
                             </div>
                         </div>
 
-                        {/* Nama Bank Selection */}
+                        {/* Namavruksha Sankalpa Selection */}
                         <div className="form-section">
-                            <h3 className="section-title">Select Nama Bank</h3>
-                            <p className="section-subtitle">Choose which Nama Banks you want to contribute to</p>
+                            <h3 className="section-title">Select Namavruksha Sankalpa</h3>
+                            <p className="section-subtitle">Choose which Sankalpas you want to contribute to</p>
 
                             {accountsLoading ? (
                                 <div className="accounts-loading">
@@ -362,7 +362,7 @@ const RegisterPage = () => {
                                     <span>Loading accounts...</span>
                                 </div>
                             ) : namaAccounts.length === 0 ? (
-                                <p className="no-accounts">No Nama Bank accounts available yet.</p>
+                                <p className="no-accounts">No Namavruksha Sankalpas available yet.</p>
                             ) : (
                                 <div className="checkbox-group">
                                     {namaAccounts.map(account => (

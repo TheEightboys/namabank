@@ -54,7 +54,7 @@ const PrayerPage = () => {
 
         setSubmitting(true);
         try {
-            await submitPrayer(formData, user?.id);
+            await submitPrayer(formData, user?.$id || user?.id);
             success('Your prayer request has been submitted for approval!');
             setFormData({
                 name: '',
@@ -106,33 +106,23 @@ const PrayerPage = () => {
         <div className="prayer-page page-enter">
             <header className="prayer-header">
                 <div className="container">
-                    <Link to="/" className="back-link">
+                    <Link to={user ? "/dashboard" : "/"} className="back-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        Back to Home
+                        {user ? "Back to Dashboard" : "Back to Home"}
                     </Link>
                     <div className="header-content">
-                        <div className="header-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M7 11v-1a5 5 0 0 1 10 0v1" />
-                                <path d="M5.5 13H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h1.5a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z" />
-                                <path d="M18.5 13H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.5a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5z" />
-                                <path d="M12 18v2" />
-                                <path d="M8 22h8" />
-                            </svg>
+                        <div className="header-icon" style={{ fontSize: '3.5rem', color: '#f59e0b', lineHeight: 1 }}>
+                            ॐ
                         </div>
-                        <h1>Prayer Community</h1>
+                        <h1>Prayers</h1>
                         <p className="subtitle">Share your prayers and support others in faith</p>
                     </div>
                     <button
                         className="btn btn-primary share-prayer-btn"
                         onClick={() => setShowSubmitModal(true)}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
                         Share Your Prayer
                     </button>
                 </div>
@@ -147,12 +137,8 @@ const PrayerPage = () => {
                         </div>
                     ) : prayers.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon-wrapper">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 19c-2-1-5-2-5-5V7a2 2 0 0 1 2-2h1c.28 0 .55.11.76.29L12 6.5l1.24-1.21c.21-.18.48-.29.76-.29h1a2 2 0 0 1 2 2v7c0 3-3 4-5 5z" />
-                                    <path d="M12 11v3" />
-                                    <path d="M10 9h4" />
-                                </svg>
+                            <div className="empty-icon-wrapper" style={{ fontSize: '3rem', color: '#cbd5e1' }}>
+                                ॐ
                             </div>
                             <h3>No Prayers Yet</h3>
                             <p>Be the first to share your prayer request with the community.</p>
@@ -160,10 +146,6 @@ const PrayerPage = () => {
                                 className="btn btn-primary"
                                 onClick={() => setShowSubmitModal(true)}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                </svg>
                                 Share Your Prayer
                             </button>
                         </div>
@@ -267,11 +249,11 @@ const PrayerPage = () => {
                                         value={formData.prayer_text}
                                         onChange={(e) => setFormData(prev => ({ ...prev, prayer_text: e.target.value }))}
                                         className="form-input"
-                                        rows={4}
-                                        maxLength={500}
+                                        rows={6}
+                                        maxLength={1500}
                                         placeholder="Share your prayer request here..."
                                     />
-                                    <small className="char-count">{formData.prayer_text.length}/500</small>
+                                    <small className="char-count">{formData.prayer_text.length}/1500</small>
                                 </div>
                             </div>
                             <div className="modal-footer">

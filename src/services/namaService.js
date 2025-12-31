@@ -156,6 +156,8 @@ export const getUserStats = async (userId) => {
     const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
 
     // Get all entries for the user
+    if (!userId) return stats;
+
     const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.NAMA_ENTRIES,
@@ -459,15 +461,15 @@ export const bulkCreateUsers = async (users, defaultAccountIds = []) => {
 
 export const submitPrayer = async (prayerData, userId = null) => {
     const data = {
-        name: prayerData.name,
-        email: prayerData.email,
-        phone: prayerData.phone || null,
-        privacy: prayerData.privacy || 'public',
+        // name: prayerData.name, // Removed: Unknown attribute
+        // email: prayerData.email, // Removed: Unknown attribute
+        // phone: prayerData.phone || null,
+        // privacy: prayerData.privacy || 'public', // Removed: Unknown attribute
         prayer_text: prayerData.prayer_text,
-        email_notifications: prayerData.email_notifications || false,
+        // email_notifications: prayerData.email_notifications || false, // Likely unknown
         status: 'pending',
-        prayer_count: 0,
-        created_at: new Date().toISOString()
+        // prayer_count: 0, // Removed: Unknown attribute
+        // created_at: new Date().toISOString() // Removed: Appwrite uses $createdAt
     };
 
     if (userId) {
@@ -645,6 +647,16 @@ export const deleteBook = async (bookId, fileUrl, moderatorId = null) => {
             console.error('Error deleting file from storage:', err);
         }
     }
+};
+
+export const updateBook = async (id, updates) => {
+    const response = await databases.updateDocument(
+        DATABASE_ID,
+        COLLECTIONS.BOOKS,
+        id,
+        updates
+    );
+    return { ...response, id: response.$id };
 };
 
 export const deleteUser = async (id, moderatorId = null) => {
