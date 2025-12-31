@@ -24,7 +24,8 @@ import {
     approveUserDeletion,
     rejectUserDeletion,
     deleteNamaAccount,
-    updateBook
+    updateBook,
+    deleteNamaEntry
 } from '../services/namaService';
 import { databases, storage, ID, Query, DATABASE_ID, COLLECTIONS, MEDIA_BUCKET_ID } from '../appwriteClient';
 import ExcelUpload from '../components/ExcelUpload';
@@ -281,6 +282,18 @@ const AdminDashboardPage = () => {
         } catch (err) {
             console.error('Delete book error:', err);
             error(err.message || 'Failed to delete book');
+        }
+    };
+
+    const handleDeleteEntry = async (id) => {
+        if (!confirm('Are you sure you want to delete this entry? This will affect the user\'s total count.')) return;
+        try {
+            await deleteNamaEntry(id);
+            success('Entry deleted successfully');
+            loadData();
+        } catch (err) {
+            console.error('Delete entry error:', err);
+            error(err.message || 'Failed to delete entry');
         }
     };
 
@@ -1036,6 +1049,7 @@ const AdminDashboardPage = () => {
                                                     <th>Count</th>
                                                     <th>Type</th>
                                                     <th>Date</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1050,6 +1064,14 @@ const AdminDashboardPage = () => {
                                                             </span>
                                                         </td>
                                                         <td>{formatDate(entry.entry_date)}</td>
+                                                        <td>
+                                                            <button
+                                                                className="btn btn-sm btn-ghost btn-danger"
+                                                                onClick={() => handleDeleteEntry(entry.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

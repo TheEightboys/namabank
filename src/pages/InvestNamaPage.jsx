@@ -14,12 +14,11 @@ const InvestNamaPage = () => {
     const [counts, setCounts] = useState({});
     const [minutes, setMinutes] = useState({}); // Track minutes separately
     const [loading, setLoading] = useState(false);
-    const [todayStats, setTodayStats] = useState({ today: 0 });
+    const [todayStats, setTodayStats] = useState({ today: 0, totalDevotees: 0 });
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [submissionSuccess, setSubmissionSuccess] = useState(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-    const [totalDevotees, setTotalDevotees] = useState(0);
     const [devoteeCount, setDevoteeCount] = useState('');
 
     useEffect(() => {
@@ -39,7 +38,6 @@ const InvestNamaPage = () => {
         setCounts(initialCounts);
         setMinutes(initialMinutes);
         loadTodayStats();
-        loadTotalDevotees();
     }, [user, linkedAccounts, navigate]);
 
     const loadTodayStats = async () => {
@@ -51,18 +49,7 @@ const InvestNamaPage = () => {
         }
     };
 
-    const loadTotalDevotees = async () => {
-        try {
-            const response = await databases.listDocuments(
-                DATABASE_ID,
-                COLLECTIONS.USERS,
-                [Query.limit(1)]
-            );
-            setTotalDevotees(response.total || 0);
-        } catch (err) {
-            console.error('Error loading devotees count:', err);
-        }
-    };
+
 
     const handleCountChange = (accountId, value) => {
         const numValue = Math.max(0, parseInt(value) || 0);
@@ -212,7 +199,7 @@ const InvestNamaPage = () => {
                         <div className="devotees-summary">
                             <div className="summary-content">
                                 <span className="summary-label">Total Devotees</span>
-                                <span className="summary-value">{totalDevotees.toLocaleString()}</span>
+                                <span className="summary-value">{todayStats.totalDevotees?.toLocaleString() || '0'}</span>
                             </div>
                             <div className="summary-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

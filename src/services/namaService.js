@@ -191,7 +191,8 @@ export const getUserStats = async (userId) => {
         thisWeek: 0,
         thisMonth: 0,
         thisYear: 0,
-        overall: 0
+        overall: 0,
+        totalDevotees: 0
     };
 
     // Early return with default stats if no userId
@@ -208,7 +209,10 @@ export const getUserStats = async (userId) => {
 
     entries.forEach(entry => {
         const count = entry.count || 0;
+        const devoteeCount = entry.devotee_count || 0;
+
         stats.overall += count;
+        stats.totalDevotees += devoteeCount;
 
         if (entry.entry_date === today) {
             stats.today += count;
@@ -254,7 +258,7 @@ export const getAllNamaEntries = async () => {
     const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.NAMA_ENTRIES,
-        [Query.orderDesc('created_at'), Query.limit(100)]
+        [Query.orderDesc('created_at'), Query.limit(1000)]
     );
 
     // Fetch related user and account data

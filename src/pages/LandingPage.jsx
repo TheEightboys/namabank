@@ -17,13 +17,6 @@ const LandingPage = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const usersResponse = await databases.listDocuments(
-                    DATABASE_ID,
-                    COLLECTIONS.USERS,
-                    [Query.limit(1)]
-                );
-                const userCount = usersResponse.total;
-
                 const namaResponse = await databases.listDocuments(
                     DATABASE_ID,
                     COLLECTIONS.NAMA_ENTRIES,
@@ -31,11 +24,18 @@ const LandingPage = () => {
                 );
 
                 const totalNama = namaResponse.documents?.reduce((sum, entry) => sum + (entry.count || 0), 0) || 0;
+
+                // Sum devotees from entries (default to 1 if not specified)
+                const totalDevoteesSum = namaResponse.documents?.reduce((sum, entry) => {
+                    const devotees = parseInt(entry.devotee_count);
+                    return sum + (isNaN(devotees) || devotees === 0 ? 1 : devotees);
+                }, 0) || 0;
+
                 const activeAccountIds = new Set(namaResponse.documents?.map(entry => entry.account_id).filter(Boolean));
                 const accountCount = activeAccountIds.size;
 
                 setLiveStats({
-                    totalUsers: userCount || 0,
+                    totalUsers: totalDevoteesSum,
                     totalNamaCount: totalNama,
                     activeAccounts: accountCount || 0
                 });
