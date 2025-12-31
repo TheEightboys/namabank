@@ -10,6 +10,9 @@ import 'react-pdf/dist/Page/TextLayer.css';
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+// Configure standard fonts from CDN to prevent local font loading errors
+const STANDARD_FONT_DATA_URL = `//unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`;
+
 const BookReaderPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -28,6 +31,10 @@ const BookReaderPage = () => {
     const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
     const [isSearching, setIsSearching] = useState(false);
     const [pageDimensions, setPageDimensions] = useState({ width: 550, height: 733 });
+    const [bookmarks, setBookmarks] = useState([]);
+    const [showBookmarks, setShowBookmarks] = useState(false);
+    const [showGoToPage, setShowGoToPage] = useState(false);
+    const [goToPageInput, setGoToPageInput] = useState('');
 
     const flipBookRef = useRef(null);
     const containerRef = useRef(null);
@@ -75,7 +82,99 @@ const BookReaderPage = () => {
 
     useEffect(() => {
         loadBook();
+        // Load bookmarks from localStorage
+        const storedBookmarks = localStorage.getItem(`bookmarks_${id}`);
+        if (storedBookmarks) {
+            setBookmarks(JSON.parse(storedBookmarks));
+        }
+        // Resume from last read page
+        const lastPage = localStorage.getItem(`lastPage_${id}`);
+        if (lastPage) {
+            setCurrentPage(parseInt(lastPage));
+        }
     }, [id]);
+
+    // Save current page on change
+    useEffect(() => {
+        if (id && currentPage > 0) {
+            localStorage.setItem(`lastPage_${id}`, currentPage.toString());
+        }
+    }, [id, currentPage]);
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (!flipBookRef.current) return;
+            if (e.target.tagName === 'INPUT') return; // Don't interfere with inputs
+
+            switch (e.key) {
+                case 'ArrowRight':
+                case 'PageDown':
+                    e.preventDefault();
+                    flipBookRef.current.pageFlip().flipNext();
+                    break;
+                case 'ArrowLeft':
+                case 'PageUp':
+                    e.preventDefault();
+                    flipBookRef.current.pageFlip().flipPrev();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    jumpToPage(0);
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    jumpToPage(numPages - 1);
+                    break;
+                case 'b':
+                case 'B':
+                    e.preventDefault();
+                    toggleBookmark();
+                    break;
+                case 'f':
+                case 'F':
+                    if (!e.ctrlKey) {
+                        e.preventDefault();
+                        toggleFullscreen();
+                    }
+                    break;
+                case 'Escape':
+                    setShowOutline(false);
+                    setShowBookmarks(false);
+                    setShowGoToPage(false);
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [numPages]);
+
+    // Toggle bookmark for current page
+    const toggleBookmark = () => {
+        const isBookmarked = bookmarks.includes(currentPage);
+        let newBookmarks;
+        if (isBookmarked) {
+            newBookmarks = bookmarks.filter(p => p !== currentPage);
+        } else {
+            newBookmarks = [...bookmarks, currentPage].sort((a, b) => a - b);
+        }
+        setBookmarks(newBookmarks);
+        localStorage.setItem(`bookmarks_${id}`, JSON.stringify(newBookmarks));
+    };
+
+    // Go to specific page
+    const handleGoToPage = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(goToPageInput) - 1;
+        if (pageNum >= 0 && pageNum < numPages) {
+            jumpToPage(pageNum);
+            setShowGoToPage(false);
+            setGoToPageInput('');
+        }
+    };
 
     const loadBook = async () => {
         try {
@@ -361,12 +460,27 @@ const BookReaderPage = () => {
                     <button className="btn-icon" onClick={() => setShowOutline(!showOutline)} title="Table of Contents">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
                     </button>
+                    <button
+                        className={`btn-icon ${bookmarks.includes(currentPage) ? 'active' : ''}`}
+                        onClick={toggleBookmark}
+                        title={bookmarks.includes(currentPage) ? "Remove Bookmark (B)" : "Add Bookmark (B)"}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={bookmarks.includes(currentPage) ? "#FF9933" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+                    </button>
+                    {bookmarks.length > 0 && (
+                        <button className="btn-icon" onClick={() => setShowBookmarks(!showBookmarks)} title="View Bookmarks">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{bookmarks.length}</span>
+                        </button>
+                    )}
                 </div>
 
                 {book && (
-                    <div className="book-title-mini">
+                    <div className="book-title-mini" onClick={() => setShowGoToPage(true)} style={{ cursor: 'pointer' }} title="Click to go to page">
                         <strong>{book.title}</strong>
                         <span>Page {currentPage + 1} of {numPages}</span>
+                        <div className="reading-progress" style={{ width: '100%', height: '3px', background: '#e0e0e0', borderRadius: '2px', marginTop: '4px' }}>
+                            <div style={{ width: `${((currentPage + 1) / numPages) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #FF9933, #FF6600)', borderRadius: '2px', transition: 'width 0.3s' }} />
+                        </div>
                     </div>
                 )}
 
@@ -431,6 +545,53 @@ const BookReaderPage = () => {
                     </aside>
                 )}
 
+                {/* Bookmarks Sidebar */}
+                {showBookmarks && (
+                    <aside className="outline-sidebar bookmarks-sidebar shadow-lg">
+                        <div className="sidebar-header">
+                            <h3>🔖 Bookmarks</h3>
+                            <button onClick={() => setShowBookmarks(false)}>×</button>
+                        </div>
+                        <div className="outline-list">
+                            {bookmarks.length > 0 ? bookmarks.map((page, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => { jumpToPage(page); setShowBookmarks(false); }}
+                                    className={currentPage === page ? 'active' : ''}
+                                >
+                                    Page {page + 1}
+                                </button>
+                            )) : (
+                                <p className="no-outline">No bookmarks yet. Press B to add one.</p>
+                            )}
+                        </div>
+                    </aside>
+                )}
+
+                {/* Go to Page Modal */}
+                {showGoToPage && (
+                    <div className="goto-modal-overlay" onClick={() => setShowGoToPage(false)}>
+                        <div className="goto-modal" onClick={e => e.stopPropagation()}>
+                            <h4>Go to Page</h4>
+                            <form onSubmit={handleGoToPage}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={numPages}
+                                    value={goToPageInput}
+                                    onChange={e => setGoToPageInput(e.target.value)}
+                                    placeholder={`1-${numPages}`}
+                                    autoFocus
+                                />
+                                <div className="modal-actions">
+                                    <button type="button" onClick={() => setShowGoToPage(false)}>Cancel</button>
+                                    <button type="submit">Go</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flipbook-wrapper" style={{ overflow: 'auto' }}>
 
                     {pdfError ? (
@@ -442,6 +603,11 @@ const BookReaderPage = () => {
                             onLoadError={onDocumentLoadError}
                             loading={<div className="loader">Loading PDF Document...</div>}
                             error={<div className="pdf-error">Failed to load PDF data.</div>}
+                            options={{
+                                standardFontDataUrl: STANDARD_FONT_DATA_URL,
+                                cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                                cMapPacked: true
+                            }}
                         >
                             {numPages > 0 ? (
                                 <HTMLFlipBook

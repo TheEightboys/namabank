@@ -76,55 +76,39 @@
    Hero Section
    ================================ */
 .hero-section {
-    padding: 1.5rem 0 1rem;
+    padding: 2rem 0 1.5rem;
 }
 
-.om-symbol {
-    font-size: 4rem;
-    color: #FF9933;
-    margin-bottom: 0.5rem;
-    animation: pulse 3s ease-in-out infinite;
+/* Logo Container */
+.logo-container {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 1.5rem;
 }
 
-@keyframes pulse {
-
-    0%,
-    100% {
-        text-shadow: 0 0 20px rgba(255, 153, 51, 0.3);
-    }
-
-    50% {
-        text-shadow: 0 0 40px rgba(255, 153, 51, 0.6);
-    }
+.logo-image {
+    width: 100%;
+    height: auto;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(255, 153, 51, 0.15);
 }
 
 .hero-title {
-    margin-bottom: 0.5rem;
-}
-
-.title-tamil {
-    display: block;
     font-size: 2.5rem;
     color: #8B0000;
     font-weight: 700;
-    line-height: 1.2;
-}
-
-.title-english {
-    display: block;
-    font-size: 1.75rem;
-    color: #CC6600;
-    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-family: 'Georgia', serif;
 }
 
 .hero-tagline {
-    font-size: 1.1rem;
-    color: #777;
+    font-size: 1.2rem;
+    color: #666;
     font-style: italic;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
 }
 
-.hero-meaning {
+.hero-description {
     font-size: 1rem;
     color: #555;
     line-height: 1.8;
@@ -132,8 +116,12 @@
     margin: 0 auto 1.25rem;
 }
 
-.hero-meaning strong {
+.hero-description .highlight-text {
     color: #8B0000;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 153, 51, 0.5);
+    text-underline-offset: 3px;
 }
 
 .greeting-text {
@@ -147,13 +135,38 @@
     border: 1px solid rgba(255, 153, 51, 0.2);
 }
 
-/* ================================
-   Intro Section
-   ================================ */
-.intro-section {
+/* Teachings Links - Side by Side */
+.teachings-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
     margin: 1.5rem 0;
-    padding: 0 1rem;
+    padding: 1rem;
 }
+
+.teaching-link {
+    color: #8B0000;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.teaching-link:hover {
+    color: #FF6600;
+    text-decoration: underline;
+}
+
+.teaching-divider {
+    color: #ccc;
+    font-size: 1rem;
+}
+
+/* ================================
+   Stats Section
+   ================================ */
 
 .intro-text {
     font-size: 1rem;
@@ -493,37 +506,58 @@
     border-top: 1px solid rgba(255, 153, 51, 0.2);
 }
 
-.footer-quote {
-    font-size: 1rem;
+.footer-logo {
+    font-size: 1.25rem;
     color: #666;
-    margin-bottom: 1rem;
-    line-height: 1.6;
+    margin-bottom: 0.5rem;
 }
 
-.footer-quote strong {
+.footer-logo strong {
     color: #8B0000;
-    font-size: 1.1rem;
+}
+
+.footer-tagline {
+    font-size: 0.95rem;
+    color: #888;
+    margin-bottom: 1.5rem;
+    font-style: italic;
 }
 
 .admin-links {
     display: flex;
     justify-content: center;
-    gap: 0.85rem;
-    font-size: 0.85rem;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+    margin-top: 1rem;
 }
 
 .admin-links a {
-    color: #999;
+    color: #666;
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+    border: 1px solid #ddd;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .admin-links a:hover {
-    color: #8B0000;
+    color: #fff;
+    background: linear-gradient(135deg, #8B0000, #A52A2A);
+    border-color: #8B0000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.25);
 }
 
 .admin-links span {
     color: #ccc;
+    font-weight: 300;
 }
 
 /* ================================

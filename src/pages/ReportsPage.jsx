@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getUserStats, getUserRecentEntries } from '../services/namaService';
+import * as XLSX from 'xlsx';
 import './ReportsPage.css';
 
 const ReportsPage = () => {
@@ -23,8 +24,8 @@ const ReportsPage = () => {
     const loadData = async () => {
         try {
             const [userStats, entries] = await Promise.all([
-                getUserStats(user.id),
-                getUserRecentEntries(user.id, 10)
+                getUserStats(user.$id),
+                getUserRecentEntries(user.$id, 10)
             ]);
             setStats(userStats);
             setRecentEntries(entries);
@@ -43,6 +44,63 @@ const ReportsPage = () => {
             month: 'short',
             year: 'numeric'
         });
+    };
+
+    const exportToExcel = () => {
+        if (recentEntries.length === 0) return;
+
+        // Prepare data for export
+        const exportData = recentEntries.map(entry => ({
+            'Entry Date': formatDate(entry.entry_date),
+            'Sankalpa': entry.nama_accounts?.name || '-',
+            'Count': entry.count,
+            'Start Date': entry.start_date ? formatDate(entry.start_date) : '-',
+            'End Date': entry.end_date ? formatDate(entry.end_date) : '-',
+            'Type': entry.source_type
+        }));
+
+        // Add summary row
+        exportData.push({});
+        exportData.push({
+            'Entry Date': 'SUMMARY',
+            'Sankalpa': '',
+            'Count': '',
+            'Start Date': '',
+            'End Date': '',
+            'Type': ''
+        });
+        exportData.push({
+            'Entry Date': 'Today',
+            'Sankalpa': stats?.today || 0,
+            'Count': '',
+            'Start Date': 'This Week',
+            'End Date': stats?.thisWeek || 0,
+            'Type': ''
+        });
+        exportData.push({
+            'Entry Date': 'This Month',
+            'Sankalpa': stats?.thisMonth || 0,
+            'Count': '',
+            'Start Date': 'This Year',
+            'End Date': stats?.thisYear || 0,
+            'Type': ''
+        });
+        exportData.push({
+            'Entry Date': 'Overall Total',
+            'Sankalpa': stats?.overall || 0,
+            'Count': '',
+            'Start Date': '',
+            'End Date': '',
+            'Type': ''
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'My Nama Report');
+
+        // Generate filename with date
+        const fileName = `NamaReport_${user.name?.replace(/\s+/g, '_') || 'User'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
     };
 
     if (!user) return null;
@@ -101,7 +159,23 @@ const ReportsPage = () => {
 
                             {/* Recent Entries */}
                             <section className="report-section">
-                                <h2>Recent Entries</h2>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <h2 style={{ margin: 0 }}>Recent Entries</h2>
+                                    {recentEntries.length > 0 && (
+                                        <button
+                                            onClick={exportToExcel}
+                                            className="btn btn-secondary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="7 10 12 15 17 10" />
+                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                            </svg>
+                                            Export Excel
+                                        </button>
+                                    )}
+                                </div>
                                 {recentEntries.length === 0 ? (
                                     <div className="empty-state">
                                         <div className="empty-state-icon">

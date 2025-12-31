@@ -56,10 +56,14 @@ const AudioPlayerPage = () => {
             );
             const files = audioFilesFiltered.map((file, index) => {
                 const isNamaJapa = file.name.startsWith('NamaJapa_');
+                // Convert URL object to string
+                const viewUrl = storage.getFileView(MEDIA_BUCKET_ID, file.$id);
+                const urlString = typeof viewUrl === 'string' ? viewUrl : viewUrl.href || viewUrl.toString();
+
                 return {
                     id: file.$id,
                     title: file.name.replace(/\.[^/.]+$/, '').replace('NamaJapa_', '').replace(/_/g, ' '),
-                    src: storage.getFileView(MEDIA_BUCKET_ID, file.$id),
+                    src: urlString,
                     isNamaJapa: isNamaJapa,
                     maxLoops: isNamaJapa ? 4 : 1
                 };
@@ -248,31 +252,7 @@ const AudioPlayerPage = () => {
                         alignItems: 'center',
                         gap: '1.5rem'
                     }}>
-                        <span style={{ fontWeight: '600', color: '#555' }}>Choose Input Mode:</span>
-
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="inputMode"
-                                value="nama"
-                                checked={inputMode === 'nama'}
-                                onChange={handleModeChange}
-                                style={{ accentColor: '#FF9933', width: '18px', height: '18px' }}
-                            />
-                            <span style={{ fontSize: '1rem' }}>Nama Count (Auto)</span>
-                        </label>
-
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="inputMode"
-                                value="minutes"
-                                checked={inputMode === 'minutes'}
-                                onChange={handleModeChange}
-                                style={{ accentColor: '#4CAF50', width: '18px', height: '18px' }}
-                            />
-                            <span style={{ fontSize: '1rem' }}>Minutes (Manual)</span>
-                        </label>
+                        <span style={{ fontWeight: '600', color: '#555' }}>Input Mode: Nama Count (Auto)</span>
 
                         <button
                             onClick={handleRevert}
@@ -306,63 +286,25 @@ const AudioPlayerPage = () => {
                                 Audio Files
                             </h2>
 
-                            {/* Tabs */}
-                            <div className="audio-tabs" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                                <button
-                                    className={`tab-btn ${activeTab === 'namajapa' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('namajapa')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.75rem',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        background: activeTab === 'namajapa' ? 'linear-gradient(135deg, #FF9933, #FF6600)' : '#f5f5f5',
-                                        color: activeTab === 'namajapa' ? '#fff' : '#666',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    🕉️ Nama Japa ({namaJapaAudio.length})
-                                </button>
-                                <button
-                                    className={`tab-btn ${activeTab === 'normal' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('normal')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.75rem',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        background: activeTab === 'normal' ? 'linear-gradient(135deg, #4CAF50, #2E7D32)' : '#f5f5f5',
-                                        color: activeTab === 'normal' ? '#fff' : '#666',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    🎧 Normal ({normalAudio.length})
-                                </button>
-                            </div>
-
                             {/* Tab Description */}
                             <div style={{
                                 padding: '0.75rem',
                                 borderRadius: '8px',
                                 marginBottom: '1rem',
-                                background: activeTab === 'namajapa' ? 'rgba(255,153,51,0.1)' : 'rgba(76,175,80,0.1)',
+                                background: 'rgba(255,153,51,0.1)',
                                 fontSize: '0.85rem',
                                 color: '#666'
                             }}>
-                                {activeTab === 'namajapa'
-                                    ? '🔁 These audio files loop 4 times. Each loop adds +4 to your Nama count.'
-                                    : '▶️ These audio files play once. Each play adds +4 to your Nama count.'}
+                                🔁 Audio files loop continuously. Each loop adds +4 to your Nama count.
                             </div>
 
                             <div className="audio-list">
                                 {loading ? (
                                     <div className="loading-audio"><div className="loader-sm"></div><p>Loading audio...</p></div>
-                                ) : (activeTab === 'namajapa' ? namaJapaAudio : normalAudio).length === 0 ? (
-                                    <p className="no-audio">No {activeTab === 'namajapa' ? 'Nama Japa' : 'normal'} audio files available.</p>
+                                ) : audioFiles.length === 0 ? (
+                                    <p className="no-audio">No audio files available.</p>
                                 ) : (
-                                    (activeTab === 'namajapa' ? namaJapaAudio : normalAudio).map((audio, index) => (
+                                    audioFiles.map((audio, index) => (
                                         <div
                                             key={audio.id}
                                             className={`audio-item ${selectedAudio?.id === audio.id ? 'active' : ''} ${selectedAudio?.id === audio.id && isPlaying ? 'playing' : ''}`}

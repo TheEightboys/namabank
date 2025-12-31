@@ -91,24 +91,40 @@ export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'm
     const results = [];
 
     for (const entry of entries) {
-        const entryData = {
-            user_id: userId,
-            account_id: entry.accountId,
-            count: entry.count,
-            source_type: sourceType,
-            entry_date: today,
-            created_at: new Date().toISOString()
-        };
-        if (startDate) entryData.start_date = startDate;
-        if (endDate) entryData.end_date = endDate;
+        try {
+            const entryData = {
+                user_id: userId,
+                account_id: entry.accountId,
+                count: parseInt(entry.count) || 0, // Ensure count is an integer
+                source_type: sourceType,
+                entry_date: today,
+                created_at: new Date().toISOString()
+            };
 
-        const response = await databases.createDocument(
-            DATABASE_ID,
-            COLLECTIONS.NAMA_ENTRIES,
-            ID.unique(),
-            entryData
-        );
-        results.push({ ...response, id: response.$id });
+            // Only add dates if they have actual values (not empty strings)
+            // Appwrite expects dates in ISO format or as date strings
+            if (startDate && typeof startDate === 'string' && startDate.trim() !== '') {
+                entryData.start_date = startDate;
+            }
+            if (endDate && typeof endDate === 'string' && endDate.trim() !== '') {
+                entryData.end_date = endDate;
+            }
+
+            console.log('Submitting entry data:', entryData);
+
+            const response = await databases.createDocument(
+                DATABASE_ID,
+                COLLECTIONS.NAMA_ENTRIES,
+                ID.unique(),
+                entryData
+            );
+            results.push({ ...response, id: response.$id });
+        } catch (error) {
+            console.error('Error submitting entry:', error);
+            console.error('Entry data was:', entry);
+            console.error('Full error response:', error.response);
+            throw error; // Re-throw to be handled by the caller
+        }
     }
 
     return results;
@@ -155,17 +171,6 @@ export const getUserStats = async (userId) => {
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
 
-    // Get all entries for the user
-    if (!userId) return stats;
-
-    const response = await databases.listDocuments(
-        DATABASE_ID,
-        COLLECTIONS.NAMA_ENTRIES,
-        [Query.equal('user_id', userId), Query.limit(10000)]
-    );
-
-    const entries = response.documents || [];
-
     const stats = {
         today: 0,
         thisWeek: 0,
@@ -173,6 +178,18 @@ export const getUserStats = async (userId) => {
         thisYear: 0,
         overall: 0
     };
+
+    // Early return with default stats if no userId
+    if (!userId) return stats;
+
+    // Get all entries for the user
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.NAMA_ENTRIES,
+        [Query.equal('user_id', userId), Query.limit(10000)]
+    );
+
+    const entries = response.documents || [];
 
     entries.forEach(entry => {
         const count = entry.count || 0;

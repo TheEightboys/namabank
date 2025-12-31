@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getApprovedPrayers, submitPrayer, incrementPrayerCount } from '../services/namaService';
+import swamyPhoto from '../assets/swamy-photo.jpg';
 import './PrayerPage.css';
 
 const PrayerPage = () => {
@@ -113,8 +114,8 @@ const PrayerPage = () => {
                         {user ? "Back to Dashboard" : "Back to Home"}
                     </Link>
                     <div className="header-content">
-                        <div className="header-icon" style={{ fontSize: '3.5rem', color: '#f59e0b', lineHeight: 1 }}>
-                            ॐ
+                        <div className="swamy-photo-container">
+                            <img src={swamyPhoto} alt="Yogi Ramsuratkumar" className="swamy-photo" />
                         </div>
                         <h1>Prayers</h1>
                         <p className="subtitle">Share your prayers and support others in faith</p>

@@ -47,16 +47,24 @@ const AudioGalleryPage = () => {
             const response = await storage.listFiles(MEDIA_BUCKET_ID);
             // Filter to only include audio files (by extension)
             const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
-            const audioFiles = response.files.filter(file =>
+            const audioFilesFiltered = response.files.filter(file =>
                 audioExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
             );
-            const files = audioFiles.map((file, index) => ({
-                id: file.$id,
-                album: 'Nama Japa Collection',
-                title: file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '), // Remove extension and underscores
-                src: storage.getFileView(MEDIA_BUCKET_ID, file.$id),
-                duration: '-:--'
-            }));
+            const files = audioFilesFiltered.map((file, index) => {
+                // Convert URL object to string
+                const viewUrl = storage.getFileView(MEDIA_BUCKET_ID, file.$id);
+                const urlString = typeof viewUrl === 'string' ? viewUrl : viewUrl.href || viewUrl.toString();
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                return {
+                    id: file.$id,
+                    album: 'Nama Japa Collection',
+                    title: file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '), // Remove extension and underscores
+                    src: urlString,
+                    duration: '-:--',
+                    extension: ext
+                };
+            });
             setAudioFiles(files);
         } catch (error) {
             console.error('Error fetching audio files:', error);
@@ -127,18 +135,26 @@ const AudioGalleryPage = () => {
 
     const handleDownload = async (audio) => {
         try {
-            const response = await fetch(audio.src);
+            // Get the download URL from Appwrite
+            const downloadUrl = storage.getFileDownload(MEDIA_BUCKET_ID, audio.id);
+            const urlString = typeof downloadUrl === 'string' ? downloadUrl : downloadUrl.href || downloadUrl.toString();
+
+            const response = await fetch(urlString);
+            if (!response.ok) throw new Error('Download failed');
+
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${audio.title.replace(/\s+/g, '_')}.mp3`;
+            link.download = `${audio.title.replace(/\s+/g, '_')}.${audio.extension || 'mp3'}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Download failed:', err);
+            // Fallback: open in new tab
+            window.open(audio.src, '_blank');
         }
     };
 

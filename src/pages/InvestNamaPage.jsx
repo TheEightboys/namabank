@@ -11,6 +11,7 @@ const InvestNamaPage = () => {
     const navigate = useNavigate();
 
     const [counts, setCounts] = useState({});
+    const [minutes, setMinutes] = useState({}); // Track minutes separately
     const [loading, setLoading] = useState(false);
     const [todayStats, setTodayStats] = useState({ today: 0 });
     const [startDate, setStartDate] = useState('');
@@ -23,18 +24,21 @@ const InvestNamaPage = () => {
             navigate('/login');
             return;
         }
-        // Initialize counts for each account
+        // Initialize counts and minutes for each account
         const initialCounts = {};
+        const initialMinutes = {};
         linkedAccounts.forEach(acc => {
             initialCounts[acc.id] = 0;
+            initialMinutes[acc.id] = '';
         });
         setCounts(initialCounts);
+        setMinutes(initialMinutes);
         loadTodayStats();
     }, [user, linkedAccounts, navigate]);
 
     const loadTodayStats = async () => {
         try {
-            const stats = await getUserStats(user.id);
+            const stats = await getUserStats(user.$id);
             setTodayStats(stats);
         } catch (err) {
             console.error('Error loading stats:', err);
@@ -44,6 +48,17 @@ const InvestNamaPage = () => {
     const handleCountChange = (accountId, value) => {
         const numValue = Math.max(0, parseInt(value) || 0);
         setCounts(prev => ({ ...prev, [accountId]: numValue }));
+        // Clear minutes when count is entered directly (one-way: Minutes -> Count only)
+        setMinutes(prev => ({ ...prev, [accountId]: '' }));
+    };
+
+    const handleMinutesChange = (accountId, value) => {
+        // Store minutes value
+        setMinutes(prev => ({ ...prev, [accountId]: value }));
+        // Calculate count from minutes (5 namas per minute)
+        const mins = parseFloat(value) || 0;
+        const calculatedCount = Math.round(mins * 5);
+        setCounts(prev => ({ ...prev, [accountId]: calculatedCount }));
     };
 
     const handleQuickAdd = (accountId, amount) => {
@@ -51,6 +66,8 @@ const InvestNamaPage = () => {
             ...prev,
             [accountId]: (prev[accountId] || 0) + amount
         }));
+        // Clear minutes when using quick add (direct count input)
+        setMinutes(prev => ({ ...prev, [accountId]: '' }));
     };
 
     const getTotalCount = () => {
@@ -90,17 +107,20 @@ const InvestNamaPage = () => {
         setLoading(true);
 
         try {
-            await submitMultipleNamaEntries(user.id, entries, 'manual', startDate, endDate);
+            await submitMultipleNamaEntries(user.$id, entries, 'manual', startDate, endDate);
             const total = getTotalCount();
             success(`${total} Namas offered successfully! Hari Om`);
             setSubmissionSuccess(`Successfully offered ${total} Namas! Hari Om.`);
 
-            // Reset counts
+            // Reset counts and minutes
             const resetCounts = {};
+            const resetMinutes = {};
             linkedAccounts.forEach(acc => {
                 resetCounts[acc.id] = 0;
+                resetMinutes[acc.id] = '';
             });
             setCounts(resetCounts);
+            setMinutes(resetMinutes);
             setStartDate('');
             setEndDate('');
             loadTodayStats();
@@ -271,11 +291,8 @@ const InvestNamaPage = () => {
                                                     <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', display: 'block' }}>Minutes (Approx)</label>
                                                     <input
                                                         type="number"
-                                                        value={counts[account.id] ? (counts[account.id] / 12).toFixed(1) : ''}
-                                                        onChange={(e) => {
-                                                            const mins = parseFloat(e.target.value) || 0;
-                                                            handleCountChange(account.id, Math.round(mins * 12));
-                                                        }}
+                                                        value={minutes[account.id] || ''}
+                                                        onChange={(e) => handleMinutesChange(account.id, e.target.value)}
                                                         className="form-input count-input"
                                                         min="0"
                                                         placeholder="0 min"

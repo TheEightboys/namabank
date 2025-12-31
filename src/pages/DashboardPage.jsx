@@ -21,7 +21,7 @@ const DashboardPage = () => {
     const loadStats = async () => {
         if (!user) return;
         try {
-            const userStats = await getUserStats(user.id);
+            const userStats = await getUserStats(user.$id);
             setStats(userStats);
         } catch (error) {
             console.error('Error loading stats:', error);
@@ -85,8 +85,23 @@ const DashboardPage = () => {
                     <section className="stats-section">
                         <h3>Your Nama Journey</h3>
                         {loading ? (
-                            <div className="stats-loading">
-                                <span className="loader"></span>
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <div className="skeleton skeleton-text lg" style={{ marginBottom: '8px' }}></div>
+                                    <div className="skeleton skeleton-text sm"></div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="skeleton skeleton-text lg" style={{ marginBottom: '8px' }}></div>
+                                    <div className="skeleton skeleton-text sm"></div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="skeleton skeleton-text lg" style={{ marginBottom: '8px' }}></div>
+                                    <div className="skeleton skeleton-text sm"></div>
+                                </div>
+                                <div className="stat-card highlight">
+                                    <div className="skeleton skeleton-text lg" style={{ marginBottom: '8px' }}></div>
+                                    <div className="skeleton skeleton-text sm"></div>
+                                </div>
                             </div>
                         ) : stats ? (
                             <div className="stats-grid">

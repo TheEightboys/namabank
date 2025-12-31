@@ -30,13 +30,22 @@ const PhotoGalleryPage = () => {
                 const titleRaw = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
                 const title = titleRaw.charAt(0).toUpperCase() + titleRaw.slice(1);
 
+                // Get file extension for download
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                // Convert URL objects to strings
+                const viewUrl = storage.getFileView(MEDIA_BUCKET_ID, file.$id);
+                const previewUrl = storage.getFilePreview(MEDIA_BUCKET_ID, file.$id, 400, 400);
+
                 return {
                     id: file.$id,
                     title: title || 'Divine Photo',
-                    url: storage.getFileView(MEDIA_BUCKET_ID, file.$id),
-                    previewUrl: storage.getFilePreview(MEDIA_BUCKET_ID, file.$id, 400, 400),
+                    url: typeof viewUrl === 'string' ? viewUrl : viewUrl.href || viewUrl.toString(),
+                    previewUrl: typeof previewUrl === 'string' ? previewUrl : previewUrl.href || previewUrl.toString(),
                     description: 'Divine glimpses & spiritual wallpapers.',
-                    category: 'Wallpapers'
+                    category: 'Wallpapers',
+                    extension: ext,
+                    mimeType: file.mimeType
                 };
             });
 
@@ -56,18 +65,27 @@ const PhotoGalleryPage = () => {
     const handleDownload = async (photo) => {
         setDownloading(photo.id);
         try {
-            const response = await fetch(photo.url);
+            // Get the download URL from Appwrite
+            const downloadUrl = storage.getFileDownload(MEDIA_BUCKET_ID, photo.id);
+            const urlString = typeof downloadUrl === 'string' ? downloadUrl : downloadUrl.href || downloadUrl.toString();
+
+            const response = await fetch(urlString);
+            if (!response.ok) throw new Error('Download failed');
+
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${photo.title.replace(/\s+/g, '_')}.jpg`;
+            // Use proper extension from the original file
+            link.download = `${photo.title.replace(/\s+/g, '_')}.${photo.extension || 'jpg'}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Download failed:', err);
+            // Fallback: open in new tab
+            window.open(photo.url, '_blank');
         } finally {
             setDownloading(null);
         }
