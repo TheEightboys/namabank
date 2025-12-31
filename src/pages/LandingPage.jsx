@@ -82,6 +82,24 @@ const LandingPage = () => {
                     <div className="greeting-text">🙏 Yogi Ramsuratkumar Jaya Guru Raya! 🙏</div>
                 </header>
 
+                {/* Question Cards Section */}
+                <section className="faq-cards-section fade-in-delay-1">
+                    <div className="faq-cards">
+                        <div className="faq-card">
+                            <h4 className="faq-question">Why Chant the Divine Name?</h4>
+                            <p className="faq-answer">Only the Name remains when everything else falls away. Nama is the simplest and highest refuge.</p>
+                        </div>
+                        <div className="faq-card">
+                            <h4 className="faq-question">Why Count Nama?</h4>
+                            <p className="faq-answer">Nama Japa gains strength through nishta (steadfastness) and regularity. Counting helps Nama take root.</p>
+                        </div>
+                        <div className="faq-card">
+                            <h4 className="faq-question">Why Offer Nama Collectively?</h4>
+                            <p className="faq-answer">When devotion is offered selflessly, it expands and uplifts all.</p>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Live Stats */}
                 <section className="stats-inline fade-in-delay-1">
                     <div className="stat-item">

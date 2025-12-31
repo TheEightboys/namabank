@@ -130,6 +130,18 @@
     font-weight: 600;
 }
 
+/* Devotees Summary */
+.devotees-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #8B0000, #A52A2A);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+    color: var(--white);
+}
+
 .today-summary {
     display: flex;
     align-items: center;

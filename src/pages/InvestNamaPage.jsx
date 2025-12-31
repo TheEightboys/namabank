@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { submitMultipleNamaEntries, getUserStats } from '../services/namaService';
+import { databases, Query, DATABASE_ID, COLLECTIONS } from '../appwriteClient';
 import './InvestNamaPage.css';
 
 const InvestNamaPage = () => {
@@ -18,6 +19,7 @@ const InvestNamaPage = () => {
     const [endDate, setEndDate] = useState('');
     const [submissionSuccess, setSubmissionSuccess] = useState(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [totalDevotees, setTotalDevotees] = useState(0);
 
     useEffect(() => {
         if (!user) {
@@ -33,7 +35,10 @@ const InvestNamaPage = () => {
         });
         setCounts(initialCounts);
         setMinutes(initialMinutes);
+        setCounts(initialCounts);
+        setMinutes(initialMinutes);
         loadTodayStats();
+        loadTotalDevotees();
     }, [user, linkedAccounts, navigate]);
 
     const loadTodayStats = async () => {
@@ -42,6 +47,19 @@ const InvestNamaPage = () => {
             setTodayStats(stats);
         } catch (err) {
             console.error('Error loading stats:', err);
+        }
+    };
+
+    const loadTotalDevotees = async () => {
+        try {
+            const response = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.USERS,
+                [Query.limit(1)]
+            );
+            setTotalDevotees(response.total || 0);
+        } catch (err) {
+            console.error('Error loading devotees count:', err);
         }
     };
 
@@ -182,6 +200,22 @@ const InvestNamaPage = () => {
                                     <span key={acc.id} className="account-tag">{acc.name}</span>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Total Devotees */}
+                    <div className="devotees-summary">
+                        <div className="summary-content">
+                            <span className="summary-label">Total Devotees</span>
+                            <span className="summary-value">{totalDevotees.toLocaleString()}</span>
+                        </div>
+                        <div className="summary-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
                         </div>
                     </div>
 
