@@ -167,13 +167,19 @@
 }
 
 .search-box input {
-    background: transparent;
+    background: #0f172a;
+    /* Explicit dark background */
     border: none;
-    color: white;
+    color: #ffffff;
+    /* Explicit white text */
     padding: 8px 12px;
     font-size: 0.85rem;
     width: 140px;
     outline: none;
+}
+
+.search-box input::placeholder {
+    color: #64748b;
 }
 
 .search-box button {
@@ -568,4 +574,31 @@ canvas {
         height: 50px;
         font-size: 1.5rem;
     }
+}
+
+/* Optimization Styles */
+.page-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fffcf5;
+    /* Warm paper tone */
+    color: #e2e8f0;
+}
+
+.page-number-watermark {
+    font-size: 3rem;
+    font-weight: bold;
+    opacity: 0.5;
+}
+
+.page-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    background: #fffcf5;
 }

@@ -55,7 +55,7 @@ const LandingPage = () => {
                 const usersResponse = await databases.listDocuments(
                     DATABASE_ID,
                     COLLECTIONS.USERS,
-                    [Query.limit(0)] // We only need the total count
+                    [Query.limit(1)] // We only need the total count
                 );
                 userCount = usersResponse.total || 0;
             } catch (err) {

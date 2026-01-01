@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import HTMLFlipBook from 'react-pageflip';
@@ -7,8 +7,8 @@ import './BookReaderPage.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configure PDF.js worker to use local file from public folder
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 // Configure standard fonts from CDN to prevent local font loading errors
 const STANDARD_FONT_DATA_URL = `//unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`;
@@ -38,6 +38,13 @@ const BookReaderPage = () => {
 
     const flipBookRef = useRef(null);
     const containerRef = useRef(null);
+
+    // Memoize PDF options to prevent reloading on every render
+    const pdfOptions = useMemo(() => ({
+        standardFontDataUrl: STANDARD_FONT_DATA_URL,
+        cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+        cMapPacked: true
+    }), []);
 
     // Aggressive scroll lock - completely freeze background page
     useEffect(() => {
@@ -222,84 +229,169 @@ const BookReaderPage = () => {
     }, [pdfBlobUrl]);
 
     const onDocumentLoadSuccess = useCallback(async (pdf) => {
-        setPdfDocument(pdf);
-        setNumPages(pdf.numPages);
         try {
-            const outlineData = await pdf.getOutline();
+            setPdfDocument(pdf);
+            setNumPages(pdf.numPages);
 
-            // Recursive helper to flatten nested outline
-            const flattenOutline = (items) => {
-                let result = [];
-                if (!items) return result;
-                for (const item of items) {
-                    result.push(item);
-                    if (item.items && item.items.length > 0) {
-                        // Recursively get children
-                        result = result.concat(flattenOutline(item.items));
-                    }
-                }
-                return result;
-            };
+            // Getting outline can be fragile if transport is unstable
+            try {
+                const outlineData = await pdf.getOutline();
 
-            // Flatten the outline structure first
-            const flatRawOutline = flattenOutline(outlineData || []);
-
-            // Process outline to extract page numbers
-            const processedOutline = [];
-            if (flatRawOutline.length > 0) {
-                for (const item of flatRawOutline) {
-                    try {
-                        let pageNum = 0;
-                        if (item.dest) {
-                            // Resolve destination to page number
-                            const dest = typeof item.dest === 'string'
-                                ? await pdf.getDestination(item.dest)
-                                : item.dest;
-
-                            if (dest) {
-                                const pageRef = dest[0];
-                                const pageIndex = await pdf.getPageIndex(pageRef);
-                                pageNum = pageIndex; // 0-indexed for flipbook
-                            }
+                // Recursive helper to flatten nested outline
+                const flattenOutline = (items) => {
+                    let result = [];
+                    if (!items) return result;
+                    for (const item of items) {
+                        result.push(item);
+                        if (item.items && item.items.length > 0) {
+                            // Recursively get children
+                            result = result.concat(flattenOutline(item.items));
                         }
-                        processedOutline.push({
-                            title: item.title,
-                            page: pageNum,
-                            // Optional: could keep depth info for indentation later
-                        });
-                    } catch (err) {
-                        console.warn('Could not resolve TOC item:', item.title, err);
+                    }
+                    return result;
+                };
+
+                // Flatten the outline structure first
+                const flatRawOutline = flattenOutline(outlineData || []);
+
+                // Process outline to extract page numbers
+                const processedOutline = [];
+                if (flatRawOutline.length > 0) {
+                    for (const item of flatRawOutline) {
+                        try {
+                            let pageNum = 0;
+                            if (item.dest) {
+                                // Resolve destination to page number
+                                const dest = typeof item.dest === 'string'
+                                    ? await pdf.getDestination(item.dest)
+                                    : item.dest;
+
+                                if (dest) {
+                                    const pageRef = dest[0];
+                                    const pageIndex = await pdf.getPageIndex(pageRef);
+                                    pageNum = pageIndex; // 0-indexed for flipbook
+                                }
+                            }
+                            processedOutline.push({
+                                title: item.title,
+                                page: pageNum,
+                                // Optional: could keep depth info for indentation later
+                            });
+                        } catch (err) {
+                            console.warn('Could not resolve TOC item:', item.title, err);
+                        }
                     }
                 }
-            }
 
-            // Fallback: If no outline found, generate a page list
-            if (processedOutline.length === 0) {
-                // Try to get outline again with a different method if possible, or just fallback
-                // Sometimes outline is empty but there are named destinations
-                // For now, just fallback to page numbers
-                for (let i = 0; i < pdf.numPages; i++) {
-                    processedOutline.push({
-                        title: `Page ${i + 1}`,
-                        page: i
-                    });
+                // Fallback: Smart Scan for Table of Contents
+                if (processedOutline.length === 0) {
+                    console.log("No metadata outline found. Attempting Smart TOC extraction...");
+                    let smartOutline = [];
+
+                    // Helper to group text items by line (Y-coordinate)
+                    const getPageLines = async (pageNum) => {
+                        const page = await pdf.getPage(pageNum);
+                        const textContent = await page.getTextContent();
+                        const items = textContent.items;
+
+                        // Group by Y coordinate (tolerance of 5 units)
+                        const lines = [];
+                        items.forEach(item => {
+                            const y = Math.round(item.transform[5] / 5) * 5;
+                            const existingLine = lines.find(l => l.y === y);
+                            if (existingLine) {
+                                existingLine.text += " " + item.str;
+                            } else {
+                                lines.push({ y, text: item.str });
+                            }
+                        });
+
+                        // Sort by Y (top to bottom)
+                        return lines.sort((a, b) => b.y - a.y).map(l => l.text.trim());
+                    };
+
+                    // Scan first 15 pages for a TOC
+                    for (let i = 1; i <= Math.min(15, pdf.numPages); i++) {
+                        const lines = await getPageLines(i);
+
+                        // Heuristic: Count how many lines look like TOC entries (Text ... Number)
+                        let tocLineCount = 0;
+                        const potentialItems = [];
+
+                        // Relaxed Regex: Capture any line ending in a number (1-3 digits)
+                        // excluding obviously long numbers (years)
+                        const looseRegex = /^(.*?)\s+(\d{1,3})$/;
+
+                        lines.forEach(line => {
+                            const trimmed = line.trim();
+                            const match = trimmed.match(looseRegex);
+
+                            if (match) {
+                                const title = match[1].replace(/[\.\s]+$/, '').trim();
+                                const pageNum = parseInt(match[2]);
+
+                                // Valid TOC entry:
+                                // 1. Page number is valid and within bounds
+                                // 2. Title has text
+                                // 3. Title isn't just a number (like "1 2")
+                                // 4. Page number isn't a year (heuristic < 200 for a book of this size, or <= numPages)
+                                if (!isNaN(pageNum) && pageNum <= pdf.numPages && title.length > 2 && isNaN(parseInt(title))) {
+                                    potentialItems.push({ title, page: pageNum - 1 });
+                                    tocLineCount++;
+                                }
+                            }
+                        });
+
+                        // If we found a page with multiple TOC-like lines (at least 3), assume it's the TOC
+                        // This bypasses the need for a specific "Contents" header which might be an image or styled weirdly
+                        if (tocLineCount >= 3) {
+                            console.log(`Found TOC on page ${i} with ${tocLineCount} items`);
+                            smartOutline.push(...potentialItems);
+                            break; // Stop after finding the first valid TOC page
+                        }
+                    }
+
+                    if (smartOutline.length > 0) {
+                        console.log(`Smart extraction found ${smartOutline.length} items.`);
+                        processedOutline.push(...smartOutline);
+                    } else {
+                        // Ultimate Fallback: Page numbers
+                        for (let i = 0; i < pdf.numPages; i++) {
+                            processedOutline.push({
+                                title: `Page ${i + 1}`,
+                                page: i
+                            });
+                        }
+                    }
+                }
+
+                setOutline(processedOutline);
+
+                const firstPage = await pdf.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                // Set dimensions based on the first page, but ensure it fits 2-page view
+                setPageDimensions({ width: viewport.width, height: viewport.height });
+
+            } catch (outlineErr) {
+                console.warn("Could not load outline or page dimensions:", outlineErr);
+                // Fallback dimensions if getPage failed
+                if (pageDimensions.width === 550) {
+                    setPageDimensions({ width: 600, height: 850 });
                 }
             }
 
-            setOutline(processedOutline);
-
-            const firstPage = await pdf.getPage(1);
-            const viewport = firstPage.getViewport({ scale: 1 });
-            // Set dimensions based on the first page, but ensure it fits 2-page view
-            setPageDimensions({ width: viewport.width, height: viewport.height });
         } catch (e) {
             console.error('Error getting PDF metadata:', e);
+            // If critical error, clear document to avoid "Transport destroyed" loops
+            setPdfDocument(null);
+            setPdfError("Error loading PDF structure: " + e.message);
         }
     }, []);
 
     const onDocumentLoadError = (error) => {
         console.error("PDF Load Error:", error);
         setPdfError("Failed to render PDF: " + error.message);
+        setPdfDocument(null);
     }
 
     const onFlip = useCallback((e) => {
@@ -325,6 +417,11 @@ const BookReaderPage = () => {
     };
 
     const handleWheel = (e) => {
+        // Stop if scrolling in sidebar or modal
+        if (e.target.closest('.outline-sidebar') || e.target.closest('.goto-modal')) {
+            return;
+        }
+
         // ALWAYS prevent default to stop any scrolling within the reader
         e.preventDefault();
         e.stopPropagation();
@@ -348,16 +445,28 @@ const BookReaderPage = () => {
 
         try {
             const results = [];
-            // Search all pages
-            for (let i = 1; i <= numPages; i++) {
-                const page = await pdfDocument.getPage(i);
-                const textContent = await page.getTextContent();
-                const text = textContent.items.map(item => item.str).join(' ');
-
-                if (text.toLowerCase().includes(searchQuery.toLowerCase())) {
-                    results.push(i - 1); // 0-indexed for flipbook
+            // Search all pages - optimized to run in chunks to avoid blocking UI
+            const CHUNK_SIZE = 5;
+            for (let i = 1; i <= numPages; i += CHUNK_SIZE) {
+                const limit = Math.min(i + CHUNK_SIZE, numPages + 1);
+                const promises = [];
+                for (let j = i; j < limit; j++) {
+                    promises.push(pdfDocument.getPage(j).then(page => page.getTextContent().then(content => ({
+                        pageIndex: j - 1,
+                        text: content.items.map(item => item.str).join(' ')
+                    }))));
                 }
+
+                const chunks = await Promise.all(promises);
+                chunks.forEach(chunk => {
+                    if (chunk.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+                        results.push(chunk.pageIndex);
+                    }
+                });
             }
+
+            results.sort((a, b) => a - b);
+
             setSearchResults(results);
             if (results.length > 0) {
                 setCurrentSearchIndex(0);
@@ -603,11 +712,7 @@ const BookReaderPage = () => {
                             onLoadError={onDocumentLoadError}
                             loading={<div className="loader">Loading PDF Document...</div>}
                             error={<div className="pdf-error">Failed to load PDF data.</div>}
-                            options={{
-                                standardFontDataUrl: STANDARD_FONT_DATA_URL,
-                                cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-                                cMapPacked: true
-                            }}
+                            options={pdfOptions}
                         >
                             {numPages > 0 ? (
                                 <HTMLFlipBook
@@ -635,19 +740,40 @@ const BookReaderPage = () => {
                                     className="nama-flipbook"
                                     ref={flipBookRef}
                                 >
-                                    {Array.from(new Array(numPages), (el, index) => (
-                                        <div key={`page_${index + 1}`} className="page-content">
-                                            <Page
-                                                pageNumber={index + 1}
-                                                width={currentWidth}
-                                                height={currentHeight}
-                                                renderTextLayer={true}
-                                                renderAnnotationLayer={true}
-                                                error={<div>Error rendering page {index + 1}</div>}
-                                            />
-                                            <div className="page-footer">{index + 1}</div>
-                                        </div>
-                                    ))}
+                                    {Array.from(new Array(numPages), (el, index) => {
+                                        const pageNum = index + 1;
+                                        // "Lazy load" pages: only render content if within 5 pages of current
+                                        // This significantly improves performance for large books
+                                        const isNear = Math.abs(pageNum - (currentPage + 1)) < 5;
+
+                                        return (
+                                            <div key={`page_${pageNum}`} className="page-content">
+                                                {isNear ? (
+                                                    <Page
+                                                        pageNumber={pageNum}
+                                                        width={currentWidth}
+                                                        height={currentHeight}
+                                                        renderTextLayer={true} // Keep text layer for selection
+                                                        renderAnnotationLayer={false} // Disable annotations for perf
+                                                        devicePixelRatio={Math.min(window.devicePixelRatio, 2)} // Cap pixel ratio for perf
+                                                        loading={<div className="page-loader">Loading...</div>}
+                                                        error={<div className="page-error">Error</div>}
+                                                        onRenderSuccess={() => {
+                                                            // Trigger highlighting for this specific page when it finishes rendering
+                                                            if (searchQuery) {
+                                                                setTimeout(highlightText, 100);
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="page-placeholder" style={{ width: currentWidth, height: currentHeight }}>
+                                                        <span className="page-number-watermark">{pageNum}</span>
+                                                    </div>
+                                                )}
+                                                <div className="page-footer">{pageNum}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </HTMLFlipBook>
                             ) : (
                                 <div className="loader">Analyzing PDF Pages...</div>
