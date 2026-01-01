@@ -24,18 +24,25 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     z-index: 50;
     border-bottom: 1px solid #1e293b;
+    position: relative;
+    /* Needed for absolute centering */
 }
 
+/* Ensure left and right sections stay on top and clickable */
 .toolbar-left,
 .toolbar-right {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    z-index: 10;
+    background: #0f172a;
+    /* Mask line behind if needed */
 }
 
 .btn-icon {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    /* Cleaner look */
+    border: 1px solid transparent;
     color: #94a3b8;
     cursor: pointer;
     width: 40px;
@@ -48,14 +55,13 @@
 }
 
 .btn-icon:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    /* More subtle hover */
     color: #f8fafc;
-    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-icon.active {
-    background: rgba(255, 153, 51, 0.2);
-    border-color: #FF9933;
+    background: rgba(255, 153, 51, 0.15);
     color: #FF9933;
 }
 
@@ -71,6 +77,7 @@
     align-items: center;
     justify-content: center;
     z-index: 200;
+    backdrop-filter: blur(2px);
 }
 
 .goto-modal {
@@ -80,6 +87,7 @@
     width: 90%;
     max-width: 280px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
 }
 
 .goto-modal h4 {
@@ -132,10 +140,25 @@
 }
 
 .book-title-mini {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
+    z-index: 5;
+    /* Ensure it doesn't overlap excessively on small screens */
+    width: 100%;
+    max-width: 400px;
+    pointer-events: none;
+    /* Let clicks pass through if overlapping empty space */
+}
+
+/* Re-enable pointer events for the interactive parts if needed, 
+   but since the title acts as a button, we need it clickable */
+.book-title-mini {
+    pointer-events: auto;
 }
 
 .book-title-mini strong {
@@ -156,10 +179,15 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #1e293b;
+    background: #0f172a;
     border-radius: 8px;
     padding: 2px 8px 2px 2px;
     border: 1px solid #334155;
+    transition: border-color 0.2s;
+}
+
+.search-container:focus-within {
+    border-color: #64748b;
 }
 
 .search-box {
@@ -373,8 +401,34 @@
 .page-content {
     background: white;
     height: 100%;
+    width: 100%;
     position: relative;
     border-left: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    /* Keep content at top for proper reading flow */
+    overflow: hidden;
+}
+
+/* Ensure PDF pages (canvas) align correctly */
+.page-content .react-pdf__Page {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+}
+
+.page-content .react-pdf__Page__canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+/* Text layer alignment */
+.page-content .react-pdf__Page__textContent {
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
 .search-highlight {

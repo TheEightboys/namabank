@@ -742,9 +742,9 @@ const BookReaderPage = () => {
                                 >
                                     {Array.from(new Array(numPages), (el, index) => {
                                         const pageNum = index + 1;
-                                        // "Lazy load" pages: only render content if within 5 pages of current
+                                        // "Lazy load" pages: only render content if within 2 pages of current
                                         // This significantly improves performance for large books
-                                        const isNear = Math.abs(pageNum - (currentPage + 1)) < 5;
+                                        const isNear = Math.abs(pageNum - (currentPage + 1)) < 3;
 
                                         return (
                                             <div key={`page_${pageNum}`} className="page-content">
