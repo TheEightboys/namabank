@@ -20,7 +20,7 @@ const InvestNamaPage = () => {
     const [submissionSuccess, setSubmissionSuccess] = useState(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [devoteeCount, setDevoteeCount] = useState('');
-    const [showNamaInfo, setShowNamaInfo] = useState(false);
+    const [showNamaInfoFor, setShowNamaInfoFor] = useState(null); // Track which account tooltip to show
 
     useEffect(() => {
         if (!user) {
@@ -346,13 +346,13 @@ const InvestNamaPage = () => {
                                                                 position: 'relative',
                                                                 fontWeight: 'bold'
                                                             }}
-                                                            onMouseEnter={() => setShowNamaInfo(true)}
-                                                            onMouseLeave={() => setShowNamaInfo(false)}
-                                                            onClick={() => setShowNamaInfo(!showNamaInfo)}
+                                                            onMouseEnter={() => setShowNamaInfoFor(account.id)}
+                                                            onMouseLeave={() => setShowNamaInfoFor(null)}
+                                                            onClick={() => setShowNamaInfoFor(showNamaInfoFor === account.id ? null : account.id)}
                                                             title="Nama Calculation Info"
                                                         >
                                                             ⓘ
-                                                            {showNamaInfo && (
+                                                            {showNamaInfoFor === account.id && (
                                                                 <div
                                                                     className="nama-info-tooltip"
                                                                     style={{

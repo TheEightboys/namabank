@@ -30,6 +30,33 @@ const RegisterPage = () => {
     const [loading, setLoading] = useState(false);
     const [accountsLoading, setAccountsLoading] = useState(true);
     const [errors, setErrors] = useState({});
+    const [countryCode, setCountryCode] = useState('+91'); // Default to India
+
+    // Common country codes
+    const COUNTRY_CODES = [
+        { code: '+91', country: 'IN', label: '🇮🇳 India (+91)' },
+        { code: '+1', country: 'US', label: '🇺🇸 USA (+1)' },
+        { code: '+44', country: 'GB', label: '🇬🇧 UK (+44)' },
+        { code: '+971', country: 'AE', label: '🇦🇪 UAE (+971)' },
+        { code: '+65', country: 'SG', label: '🇸🇬 Singapore (+65)' },
+        { code: '+60', country: 'MY', label: '🇲🇾 Malaysia (+60)' },
+        { code: '+61', country: 'AU', label: '🇦🇺 Australia (+61)' },
+        { code: '+49', country: 'DE', label: '🇩🇪 Germany (+49)' },
+        { code: '+33', country: 'FR', label: '🇫🇷 France (+33)' },
+        { code: '+81', country: 'JP', label: '🇯🇵 Japan (+81)' },
+        { code: '+86', country: 'CN', label: '🇨🇳 China (+86)' },
+        { code: '+27', country: 'ZA', label: '🇿🇦 South Africa (+27)' },
+        { code: '+234', country: 'NG', label: '🇳🇬 Nigeria (+234)' },
+        { code: '+254', country: 'KE', label: '🇰🇪 Kenya (+254)' },
+        { code: '+966', country: 'SA', label: '🇸🇦 Saudi Arabia (+966)' },
+        { code: '+974', country: 'QA', label: '🇶🇦 Qatar (+974)' },
+        { code: '+968', country: 'OM', label: '🇴🇲 Oman (+968)' },
+        { code: '+973', country: 'BH', label: '🇧🇭 Bahrain (+973)' },
+        { code: '+965', country: 'KW', label: '🇰🇼 Kuwait (+965)' },
+        { code: '+94', country: 'LK', label: '🇱🇰 Sri Lanka (+94)' },
+        { code: '+977', country: 'NP', label: '🇳🇵 Nepal (+977)' },
+        { code: '+880', country: 'BD', label: '🇧🇩 Bangladesh (+880)' },
+    ];
 
     useEffect(() => {
         loadNamaAccounts();
@@ -155,7 +182,7 @@ const RegisterPage = () => {
         const result = await register(
             {
                 name: formData.name.trim(),
-                whatsapp: formData.whatsapp.trim(),
+                whatsapp: (countryCode + formData.whatsapp.replace(/^\+?\d{1,4}/, '')).trim(),
                 email: formData.email.trim(),
                 password: formData.password,
                 city: formData.city.trim(),
@@ -253,14 +280,27 @@ const RegisterPage = () => {
                         {/* WhatsApp */}
                         <div className="form-group">
                             <label className="form-label">WhatsApp Number <span className="required">*</span></label>
-                            <input
-                                type="tel"
-                                name="whatsapp"
-                                value={formData.whatsapp}
-                                onChange={handleChange}
-                                className={`form-input ${errors.whatsapp ? 'error' : ''}`}
-                                placeholder="+91 9876543210"
-                            />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <select
+                                    value={countryCode}
+                                    onChange={(e) => setCountryCode(e.target.value)}
+                                    className="form-input"
+                                    style={{ width: '160px', flexShrink: 0 }}
+                                >
+                                    {COUNTRY_CODES.map(cc => (
+                                        <option key={cc.code} value={cc.code}>{cc.label}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="tel"
+                                    name="whatsapp"
+                                    value={formData.whatsapp}
+                                    onChange={handleChange}
+                                    className={`form-input ${errors.whatsapp ? 'error' : ''}`}
+                                    placeholder="9876543210"
+                                    style={{ flex: 1 }}
+                                />
+                            </div>
                             {errors.whatsapp && <span className="form-error">{errors.whatsapp}</span>}
                             <span className="form-hint">Used for important updates</span>
                         </div>

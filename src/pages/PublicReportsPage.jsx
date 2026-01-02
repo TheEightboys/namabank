@@ -460,8 +460,40 @@ const PublicReportsPage = () => {
                             <table className="table">
                                 <thead>
                                     <tr>
-                                        <th>Sankalpa</th><th>Today</th><th>This Week</th>
-                                        <th>This Month</th><th>This Year</th><th>Overall</th>
+                                        <th>Sankalpa</th>
+                                        <th>
+                                            Today
+                                            <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'normal' }}>
+                                                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}
+                                            </div>
+                                        </th>
+                                        <th>
+                                            This Week
+                                            <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'normal' }}>
+                                                {(() => {
+                                                    const now = new Date();
+                                                    const day = now.getDay();
+                                                    const monday = new Date(now);
+                                                    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+                                                    const sunday = new Date(monday);
+                                                    sunday.setDate(monday.getDate() + 6);
+                                                    return `${monday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}`;
+                                                })()}
+                                            </div>
+                                        </th>
+                                        <th>
+                                            This Month
+                                            <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'normal' }}>
+                                                {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                                            </div>
+                                        </th>
+                                        <th>
+                                            This Year
+                                            <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'normal' }}>
+                                                {new Date().getFullYear()}
+                                            </div>
+                                        </th>
+                                        <th>Overall</th>
                                     </tr>
                                 </thead>
                                 <tbody>

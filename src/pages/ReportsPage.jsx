@@ -19,6 +19,13 @@ const ReportsPage = () => {
     const [dateRangeTotal, setDateRangeTotal] = useState(null);
     const [dateRangeLoading, setDateRangeLoading] = useState(false);
 
+    // Calendar state
+    const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+    const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+    const [calendarData, setCalendarData] = useState({});
+    const [calendarLoading, setCalendarLoading] = useState(false);
+    const [selectedDay, setSelectedDay] = useState(null);
+
     useEffect(() => {
         if (!user) {
             navigate('/login');
@@ -40,6 +47,94 @@ const ReportsPage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Fetch calendar data for a specific month
+    const fetchCalendarData = async (month, year) => {
+        setCalendarLoading(true);
+        try {
+            const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            const result = await getUserEntriesByDateRange(user.$id, startDate, endDate);
+
+            // Group entries by date
+            const dailyData = {};
+            if (result.entries) {
+                result.entries.forEach(entry => {
+                    const date = entry.entry_date;
+                    if (!dailyData[date]) dailyData[date] = 0;
+                    dailyData[date] += entry.count || 0;
+                });
+            }
+            setCalendarData(dailyData);
+        } catch (err) {
+            console.error('Error fetching calendar data:', err);
+            setCalendarData({});
+        } finally {
+            setCalendarLoading(false);
+        }
+    };
+
+    // Load calendar data when month/year changes
+    useEffect(() => {
+        if (user) {
+            fetchCalendarData(calendarMonth, calendarYear);
+        }
+    }, [calendarMonth, calendarYear, user]);
+
+    // Calendar navigation
+    const navigateMonth = (direction) => {
+        if (direction === 'prev') {
+            if (calendarMonth === 0) {
+                setCalendarMonth(11);
+                setCalendarYear(calendarYear - 1);
+            } else {
+                setCalendarMonth(calendarMonth - 1);
+            }
+        } else {
+            if (calendarMonth === 11) {
+                setCalendarMonth(0);
+                setCalendarYear(calendarYear + 1);
+            } else {
+                setCalendarMonth(calendarMonth + 1);
+            }
+        }
+        setSelectedDay(null);
+    };
+
+    // Get calendar grid
+    const getCalendarDays = () => {
+        const firstDay = new Date(calendarYear, calendarMonth, 1);
+        const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+        const days = [];
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startDayOfWeek; i++) {
+            days.push({ day: null, date: null });
+        }
+        // Add actual days
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            days.push({ day: d, date: dateStr, count: calendarData[dateStr] || 0 });
+        }
+        return days;
+    };
+
+    // Get monthly total from calendar data
+    const getMonthlyTotal = () => {
+        return Object.values(calendarData).reduce((sum, count) => sum + count, 0);
+    };
+
+    // Get color intensity based on count
+    const getColorIntensity = (count) => {
+        if (!count) return 'transparent';
+        if (count < 20) return 'rgba(255, 153, 51, 0.2)';
+        if (count < 50) return 'rgba(255, 153, 51, 0.4)';
+        if (count < 100) return 'rgba(255, 153, 51, 0.6)';
+        if (count < 200) return 'rgba(255, 153, 51, 0.8)';
+        return 'rgba(255, 153, 51, 1)';
     };
 
     const formatNumber = (num) => num?.toLocaleString() || '0';
@@ -351,6 +446,224 @@ const ReportsPage = () => {
                                         </div>
                                     </div>
                                 )}
+                            </section>
+
+                            {/* Interactive Calendar */}
+                            <section className="report-section" style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    📅 Nama Calendar
+                                </h2>
+                                <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                    View your daily contributions. Navigate to previous months to see your history.
+                                </p>
+
+                                {/* Month Navigation */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '1rem',
+                                    padding: '0.75rem 1rem',
+                                    background: 'var(--cream-light, #fdf8f3)',
+                                    borderRadius: '8px'
+                                }}>
+                                    <button
+                                        onClick={() => navigateMonth('prev')}
+                                        style={{
+                                            background: 'white',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '8px',
+                                            padding: '8px 16px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        ← {new Date(calendarYear, calendarMonth - 1).toLocaleDateString('en-IN', { month: 'short' })}
+                                    </button>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#333' }}>
+                                            {new Date(calendarYear, calendarMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                                        </div>
+                                        {calendarLoading && <span style={{ fontSize: '0.75rem', color: '#888' }}>Loading...</span>}
+                                    </div>
+                                    <button
+                                        onClick={() => navigateMonth('next')}
+                                        style={{
+                                            background: 'white',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '8px',
+                                            padding: '8px 16px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        {new Date(calendarYear, calendarMonth + 1).toLocaleDateString('en-IN', { month: 'short' })} →
+                                    </button>
+                                </div>
+
+                                {/* Quick Month Jump */}
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', justifyContent: 'center' }}>
+                                    {[-3, -2, -1, 0].map(offset => {
+                                        const d = new Date();
+                                        d.setMonth(d.getMonth() + offset);
+                                        const isActive = calendarMonth === d.getMonth() && calendarYear === d.getFullYear();
+                                        return (
+                                            <button
+                                                key={offset}
+                                                onClick={() => { setCalendarMonth(d.getMonth()); setCalendarYear(d.getFullYear()); }}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    borderRadius: '20px',
+                                                    border: isActive ? '2px solid #FF9933' : '1px solid #ddd',
+                                                    background: isActive ? '#FFF8E1' : 'white',
+                                                    color: isActive ? '#FF6600' : '#666',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    fontWeight: isActive ? '600' : '400'
+                                                }}
+                                            >
+                                                {d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Calendar Grid */}
+                                <div style={{ marginBottom: '1rem' }}>
+                                    {/* Weekday Headers */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(7, 1fr)',
+                                        gap: '4px',
+                                        marginBottom: '8px'
+                                    }}>
+                                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                            <div key={day} style={{
+                                                textAlign: 'center',
+                                                padding: '8px 4px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: '600',
+                                                color: '#888'
+                                            }}>
+                                                {day}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Day Cells */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(7, 1fr)',
+                                        gap: '4px'
+                                    }}>
+                                        {getCalendarDays().map((cell, idx) => (
+                                            <div
+                                                key={idx}
+                                                onClick={() => cell.day && setSelectedDay(cell)}
+                                                style={{
+                                                    aspectRatio: '1',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    borderRadius: '8px',
+                                                    cursor: cell.day ? 'pointer' : 'default',
+                                                    background: selectedDay?.date === cell.date
+                                                        ? 'linear-gradient(135deg, #FF9933 0%, #FF6600 100%)'
+                                                        : getColorIntensity(cell.count),
+                                                    border: cell.date === new Date().toISOString().split('T')[0]
+                                                        ? '2px solid #8B0000'
+                                                        : selectedDay?.date === cell.date
+                                                            ? 'none'
+                                                            : '1px solid #eee',
+                                                    color: selectedDay?.date === cell.date ? 'white' : '#333',
+                                                    transition: 'all 0.2s ease',
+                                                    minHeight: '50px'
+                                                }}
+                                            >
+                                                {cell.day && (
+                                                    <>
+                                                        <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{cell.day}</span>
+                                                        {cell.count > 0 && (
+                                                            <span style={{
+                                                                fontSize: '0.65rem',
+                                                                fontWeight: '500',
+                                                                marginTop: '2px',
+                                                                opacity: selectedDay?.date === cell.date ? 1 : 0.8
+                                                            }}>
+                                                                {cell.count}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Selected Day Info */}
+                                {selectedDay && (
+                                    <div style={{
+                                        padding: '1rem',
+                                        background: 'linear-gradient(135deg, #FF9933 0%, #FF6600 100%)',
+                                        borderRadius: '12px',
+                                        color: 'white',
+                                        textAlign: 'center',
+                                        marginBottom: '1rem'
+                                    }}>
+                                        <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                                            {new Date(selectedDay.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                                            {formatNumber(selectedDay.count)}
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Namas</div>
+                                    </div>
+                                )}
+
+                                {/* Monthly Summary */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '1rem',
+                                    background: '#f8f9fa',
+                                    borderRadius: '8px'
+                                }}>
+                                    <div>
+                                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Monthly Total</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#FF6600' }}>
+                                            {formatNumber(getMonthlyTotal())} Namas
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Days with activity</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333' }}>
+                                            {Object.keys(calendarData).filter(k => calendarData[k] > 0).length} days
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Color Legend */}
+                                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#888' }}>Intensity:</span>
+                                    {[{ label: '1-19', color: 'rgba(255, 153, 51, 0.2)' },
+                                    { label: '20-49', color: 'rgba(255, 153, 51, 0.4)' },
+                                    { label: '50-99', color: 'rgba(255, 153, 51, 0.6)' },
+                                    { label: '100-199', color: 'rgba(255, 153, 51, 0.8)' },
+                                    { label: '200+', color: 'rgba(255, 153, 51, 1)' }].map(item => (
+                                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ width: '16px', height: '16px', background: item.color, borderRadius: '4px', border: '1px solid #ddd' }} />
+                                            <span style={{ fontSize: '0.7rem', color: '#666' }}>{item.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </section>
                             <section className="report-section">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
