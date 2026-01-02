@@ -469,9 +469,9 @@ const PublicReportsPage = () => {
                                         <tr key={account.id}>
                                             <td><strong>{account.name}</strong></td>
                                             <td>{formatNumber(account.today)}</td>
-                                            <td>{formatNumber(account.thisWeek)}</td>
-                                            <td>{formatNumber(account.thisMonth)}</td>
-                                            <td>{formatNumber(account.thisYear)}</td>
+                                            <td>{formatNumber(account.currentWeek)}</td>
+                                            <td>{formatNumber(account.currentMonth)}</td>
+                                            <td>{formatNumber(account.currentYear)}</td>
                                             <td className="highlight-cell">{formatNumber(account.overall)}</td>
                                         </tr>
                                     ))}

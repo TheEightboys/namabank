@@ -629,15 +629,14 @@ export const bulkCreateUsers = async (users, defaultAccountIds = [], onProgress 
 
 export const submitPrayer = async (prayerData, userId = null) => {
     const data = {
-        // name: prayerData.name, // Removed: Unknown attribute
-        // email: prayerData.email, // Removed: Unknown attribute
-        // phone: prayerData.phone || null,
-        // privacy: prayerData.privacy || 'public', // Removed: Unknown attribute
+        name: prayerData.name,
+        email: prayerData.email,
+        phone: prayerData.phone || null,
+        privacy: prayerData.privacy || 'public',
         prayer_text: prayerData.prayer_text,
-        // email_notifications: prayerData.email_notifications || false, // Likely unknown
+        email_notifications: prayerData.email_notifications || false,
         status: 'pending',
-        // prayer_count: 0, // Removed: Unknown attribute
-        // created_at: new Date().toISOString() // Removed: Appwrite uses $createdAt
+        prayer_count: 0
     };
 
     if (userId) {

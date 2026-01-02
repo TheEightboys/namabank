@@ -26,6 +26,7 @@ const AudioPlayerPage = () => {
     // Mode Selection State
     const [inputMode, setInputMode] = useState('nama'); // 'nama' or 'minutes'
     const [minutes, setMinutes] = useState(0);
+    const [showNamaInfo, setShowNamaInfo] = useState(false);
 
     // Submission state
     const [selectedAccount, setSelectedAccount] = useState('');
@@ -191,9 +192,16 @@ const AudioPlayerPage = () => {
             return;
         }
 
-        const valueToSubmit = inputMode === 'nama' ? namaCount : minutes;
+        // Convert minutes to namas if in minutes mode (1 min = 20 namas)
+        let namaValueToSubmit;
+        if (inputMode === 'nama') {
+            namaValueToSubmit = namaCount;
+        } else {
+            // Minutes mode: convert to namas (1 minute = 20 namas)
+            namaValueToSubmit = Math.round(minutes * 20);
+        }
 
-        if (valueToSubmit <= 0) {
+        if (namaValueToSubmit <= 0) {
             error(`Please enter valid ${inputMode === 'nama' ? 'Namas' : 'Minutes'} to submit.`);
             return;
         }
@@ -202,9 +210,13 @@ const AudioPlayerPage = () => {
         handleStop();
 
         try {
-            const type = inputMode === 'nama' ? 'audio' : 'minutes';
-            await submitNamaEntry(user.id || user.$id, selectedAccount, valueToSubmit, type);
-            success(`${valueToSubmit} ${inputMode === 'nama' ? 'Namas' : 'Minutes'} submitted! Hari Om 🙏`);
+            // Always submit as 'audio' type for data consistency
+            await submitNamaEntry(user.id || user.$id, selectedAccount, namaValueToSubmit, 'audio');
+
+            const displayValue = inputMode === 'nama' ? namaValueToSubmit : minutes;
+            const displayUnit = inputMode === 'nama' ? 'Namas' : `Minutes (${namaValueToSubmit} Namas)`;
+            success(`${displayValue} ${displayUnit} submitted! Hari Om 🙏`);
+
             setLoopCount(0);
             setNamaCount(0);
             setMinutes(0);
@@ -413,7 +425,50 @@ const AudioPlayerPage = () => {
                                 </>
                             ) : (
                                 <div style={{ background: '#f0fff4', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #c6f6d5', textAlign: 'center' }}>
-                                    <label className="form-label" style={{ color: '#2E7D32', marginBottom: '0.5rem', display: 'block' }}>Enter Minutes Chanted</label>
+                                    <label className="form-label" style={{ color: '#2E7D32', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        Enter Minutes Chanted
+                                        <span
+                                            style={{
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                color: '#FF9933',
+                                                position: 'relative',
+                                                fontWeight: 'bold'
+                                            }}
+                                            onMouseEnter={() => setShowNamaInfo(true)}
+                                            onMouseLeave={() => setShowNamaInfo(false)}
+                                            onClick={() => setShowNamaInfo(!showNamaInfo)}
+                                            title="Nama Calculation Info"
+                                        >
+                                            ⓘ
+                                            {showNamaInfo && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        marginTop: '8px',
+                                                        backgroundColor: '#2d3748',
+                                                        color: 'white',
+                                                        padding: '12px 16px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.75rem',
+                                                        lineHeight: '1.5',
+                                                        width: '260px',
+                                                        zIndex: 100,
+                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                                                        textAlign: 'left'
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <strong style={{ color: '#FF9933', display: 'block', marginBottom: '6px' }}>ⓘ Nama Calculation</strong>
+                                                    <strong>1 minute = 20 Namas</strong><br />
+                                                    <span style={{ opacity: 0.9, fontSize: '0.7rem' }}>Chanting the mantra 5 times = 20 Namas</span>
+                                                </div>
+                                            )}
+                                        </span>
+                                    </label>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                                         <input
                                             type="number" min="0" value={minutes}
@@ -422,6 +477,11 @@ const AudioPlayerPage = () => {
                                         />
                                         <span style={{ fontSize: '1.2rem', color: '#2E7D32' }}>Mins</span>
                                     </div>
+                                    {minutes > 0 && (
+                                        <div style={{ marginTop: '8px', fontSize: '0.9rem', color: '#666' }}>
+                                            = <strong style={{ color: '#FF9933' }}>{Math.round(minutes * 20)}</strong> Namas
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -431,7 +491,11 @@ const AudioPlayerPage = () => {
                                 disabled={submitting || (inputMode === 'nama' ? namaCount === 0 : minutes === 0)}
                                 style={{ marginTop: '1rem' }}
                             >
-                                {submitting ? 'Submitting...' : `Submit ${inputMode === 'nama' ? namaCount + ' Namas' : minutes + ' Minutes'}`}
+                                {submitting ? 'Submitting...' : (
+                                    inputMode === 'nama'
+                                        ? `Submit ${namaCount} Namas`
+                                        : `Submit ${minutes} Minutes (${Math.round(minutes * 20)} Namas)`
+                                )}
                             </button>
 
                             {inputMode === 'nama' && (

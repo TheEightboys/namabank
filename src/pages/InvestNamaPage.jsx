@@ -20,6 +20,7 @@ const InvestNamaPage = () => {
     const [submissionSuccess, setSubmissionSuccess] = useState(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [devoteeCount, setDevoteeCount] = useState('');
+    const [showNamaInfo, setShowNamaInfo] = useState(false);
 
     useEffect(() => {
         if (!user) {
@@ -61,9 +62,10 @@ const InvestNamaPage = () => {
     const handleMinutesChange = (accountId, value) => {
         // Store minutes value
         setMinutes(prev => ({ ...prev, [accountId]: value }));
-        // Calculate count from minutes (5 namas per minute)
+        // Calculate count from minutes (20 namas per minute)
+        // 1 min = 20 Namas (chanting the mantra 5 times, 4 Namas each = 20)
         const mins = parseFloat(value) || 0;
-        const calculatedCount = Math.round(mins * 5);
+        const calculatedCount = Math.round(mins * 20);
         setCounts(prev => ({ ...prev, [accountId]: calculatedCount }));
     };
 
@@ -332,8 +334,78 @@ const InvestNamaPage = () => {
 
                                                 <div className="input-divider" style={{ display: 'flex', alignItems: 'center', paddingTop: '1.5rem', color: '#999' }}>OR</div>
 
-                                                <div className="input-group" style={{ flex: 1 }}>
-                                                    <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', display: 'block' }}>Minutes (Approx)</label>
+                                                <div className="input-group" style={{ flex: 1, position: 'relative' }}>
+                                                    <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        Minutes (Approx)
+                                                        <span
+                                                            className="info-icon"
+                                                            style={{
+                                                                cursor: 'pointer',
+                                                                fontSize: '1rem',
+                                                                color: '#FF9933',
+                                                                position: 'relative',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                            onMouseEnter={() => setShowNamaInfo(true)}
+                                                            onMouseLeave={() => setShowNamaInfo(false)}
+                                                            onClick={() => setShowNamaInfo(!showNamaInfo)}
+                                                            title="Nama Calculation Info"
+                                                        >
+                                                            ⓘ
+                                                            {showNamaInfo && (
+                                                                <div
+                                                                    className="nama-info-tooltip"
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        top: '100%',
+                                                                        left: '50%',
+                                                                        transform: 'translateX(-50%)',
+                                                                        marginTop: '8px',
+                                                                        backgroundColor: '#2d3748',
+                                                                        color: 'white',
+                                                                        padding: '12px 16px',
+                                                                        borderRadius: '8px',
+                                                                        fontSize: '0.8rem',
+                                                                        lineHeight: '1.5',
+                                                                        width: '280px',
+                                                                        zIndex: 100,
+                                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                                                                        textAlign: 'left'
+                                                                    }}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <strong style={{ color: '#FF9933', display: 'block', marginBottom: '8px' }}>ⓘ Nama Calculation Info</strong>
+                                                                    <div style={{ marginBottom: '8px' }}>
+                                                                        <strong>1 minute = 20 Namas</strong><br />
+                                                                        <span style={{ opacity: 0.8 }}>12 seconds = 4 Namas</span>
+                                                                    </div>
+                                                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '8px', marginTop: '8px' }}>
+                                                                        <strong style={{ color: '#FFD700' }}>Why?</strong><br />
+                                                                        <span style={{ opacity: 0.9 }}>Chanting:</span>
+                                                                        <div style={{ fontStyle: 'italic', margin: '6px 0', paddingLeft: '8px', borderLeft: '2px solid #FF9933' }}>
+                                                                            Yogi Ramsuratkumar<br />
+                                                                            Yogi Ramsuratkumar<br />
+                                                                            Yogi Ramsuratkumar<br />
+                                                                            Jaya Guru Raya
+                                                                        </div>
+                                                                        <span style={{ opacity: 0.9 }}>is counted as <strong>4 Namas</strong>, which takes ~12 seconds.</span><br />
+                                                                        <span style={{ opacity: 0.9 }}>So, <strong>1 minute ≈ 5 × 4 = 20 Namas</strong></span>
+                                                                    </div>
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        top: '-6px',
+                                                                        left: '50%',
+                                                                        transform: 'translateX(-50%)',
+                                                                        width: 0,
+                                                                        height: 0,
+                                                                        borderLeft: '6px solid transparent',
+                                                                        borderRight: '6px solid transparent',
+                                                                        borderBottom: '6px solid #2d3748'
+                                                                    }} />
+                                                                </div>
+                                                            )}
+                                                        </span>
+                                                    </label>
                                                     <input
                                                         type="number"
                                                         value={minutes[account.id] || ''}
