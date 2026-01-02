@@ -428,13 +428,7 @@ const ModeratorDashboardPage = () => {
 
     const handleBulkUpload = async (usersToUpload) => {
         try {
-            setLoading(true); // Re-use loading or specific state? Using main loading for simplicity
-
-            // Extract defaultAccountIds if any (assuming they are passed in the first user object or separate param)
-            // The ExcelUpload component passes users with 'accountIds' property on each user object.
-            // But bulkCreateUsers service expects (users, defaultAccountIds) where defaultAccountIds applies to all.
-            // Let's check how ExcelUpload constructs data.
-            // It maps: user.accountIds = selectedDefaultAccounts. So it's per user but all same.
+            setLoading(true);
 
             const defaultAccountIds = usersToUpload[0]?.accountIds || [];
 
@@ -444,18 +438,32 @@ const ModeratorDashboardPage = () => {
             const errorCount = failedUsers.length;
 
             if (successCount > 0) {
-                const skipMsg = errorCount > 0 ? ` (${errorCount} duplicates skipped)` : '';
-                success(`Successfully added ${successCount} new users${skipMsg}!`);
-            } else if (errorCount > 0) {
-                // If only duplicates found, treat as info/success rather than error
-                success(`No new users added. All ${errorCount} records were duplicates.`);
+                success(`Successfully added ${successCount} new devotees!`);
+            }
+
+            if (errorCount > 0) {
+                // Show detailed error information
+                const duplicates = failedUsers.filter(e => e.type === 'duplicate').length;
+                const createFailed = failedUsers.filter(e => e.type === 'create_failed');
+
+                if (duplicates > 0) {
+                    error(`${duplicates} devotees were skipped (already exist)`);
+                }
+                if (createFailed.length > 0) {
+                    const errorDetails = createFailed.slice(0, 3).map(e => `${e.user.name}: ${e.error}`).join('; ');
+                    error(`${createFailed.length} devotees failed: ${errorDetails}`);
+                }
+            }
+
+            if (successCount === 0 && errorCount === 0) {
+                error('No users were processed. Please check your file.');
             }
 
             setShowUploadModal(false);
             loadData();
         } catch (err) {
             console.error('Bulk upload failed:', err);
-            error('Bulk upload failed');
+            error(`Bulk upload failed: ${err.message || 'Please try again.'}`);
         } finally {
             setLoading(false);
         }

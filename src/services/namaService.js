@@ -181,16 +181,27 @@ export const getUserRecentEntries = async (userId, limit = 10) => {
 };
 
 export const getUserStats = async (userId) => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    // Calculate current week (Monday to Sunday)
+    const dayOfWeek = now.getDay(); // 0 = Sunday
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + mondayOffset);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+    const prevYearStart = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+    const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
 
     const stats = {
         today: 0,
-        thisWeek: 0,
-        thisMonth: 0,
-        thisYear: 0,
+        currentWeek: 0,
+        currentMonth: 0,
+        currentYear: 0,
+        previousYear: 0,
         overall: 0,
         totalDevotees: 0
     };
@@ -217,14 +228,17 @@ export const getUserStats = async (userId) => {
         if (entry.entry_date === today) {
             stats.today += count;
         }
-        if (entry.entry_date >= weekAgo) {
-            stats.thisWeek += count;
+        if (entry.entry_date >= weekStartStr) {
+            stats.currentWeek += count;
         }
         if (entry.entry_date >= monthStart) {
-            stats.thisMonth += count;
+            stats.currentMonth += count;
         }
         if (entry.entry_date >= yearStart) {
-            stats.thisYear += count;
+            stats.currentYear += count;
+        }
+        if (entry.entry_date >= prevYearStart && entry.entry_date <= prevYearEnd) {
+            stats.previousYear += count;
         }
     });
 
@@ -315,10 +329,20 @@ export const deleteNamaEntry = async (id) => {
 };
 
 export const getAccountStats = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    // Calculate current week (Monday to Sunday)
+    const dayOfWeek = now.getDay(); // 0 = Sunday
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + mondayOffset);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+    const prevYearStart = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+    const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
 
     // Get all active accounts
     const accountsResponse = await databases.listDocuments(
@@ -341,9 +365,10 @@ export const getAccountStats = async () => {
 
         const stats = {
             today: 0,
-            thisWeek: 0,
-            thisMonth: 0,
-            thisYear: 0,
+            currentWeek: 0,
+            currentMonth: 0,
+            currentYear: 0,
+            previousYear: 0,
             overall: 0
         };
 
@@ -352,9 +377,10 @@ export const getAccountStats = async () => {
             stats.overall += count;
 
             if (entry.entry_date === today) stats.today += count;
-            if (entry.entry_date >= weekAgo) stats.thisWeek += count;
-            if (entry.entry_date >= monthStart) stats.thisMonth += count;
-            if (entry.entry_date >= yearStart) stats.thisYear += count;
+            if (entry.entry_date >= weekStartStr) stats.currentWeek += count;
+            if (entry.entry_date >= monthStart) stats.currentMonth += count;
+            if (entry.entry_date >= yearStart) stats.currentYear += count;
+            if (entry.entry_date >= prevYearStart && entry.entry_date <= prevYearEnd) stats.previousYear += count;
         });
 
         return {
@@ -454,37 +480,98 @@ export const unlinkUserFromAccount = async (userId, accountId) => {
 // Bulk User Creation Service
 // ============================================
 
-export const bulkCreateUsers = async (users, defaultAccountIds = []) => {
+export const bulkCreateUsers = async (users, defaultAccountIds = [], onProgress = null) => {
     const results = [];
     const errors = [];
+    const BATCH_SIZE = 10; // Process 10 users at a time
+    const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
 
-    for (const userData of users) {
-        try {
-            const newUser = await databases.createDocument(
-                DATABASE_ID,
-                COLLECTIONS.USERS,
-                ID.unique(),
-                {
-                    name: userData.name,
-                    whatsapp: userData.whatsapp,
-                    password_hash: userData.password,
-                    city: userData.city || null,
-                    state: userData.state || null,
-                    country: userData.country || null,
-                    is_active: true,
-                    created_at: new Date().toISOString()
+    // Helper to delay execution
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Process users in batches
+    for (let i = 0; i < users.length; i += BATCH_SIZE) {
+        const batch = users.slice(i, i + BATCH_SIZE);
+
+        // Process batch sequentially (to avoid rate limits)
+        for (const userData of batch) {
+            try {
+                // Check if user already exists (by whatsapp number)
+                let existingUser = null;
+                try {
+                    const existingCheck = await databases.listDocuments(
+                        DATABASE_ID,
+                        COLLECTIONS.USERS,
+                        [Query.equal('whatsapp', userData.whatsapp), Query.limit(1)]
+                    );
+                    if (existingCheck.documents.length > 0) {
+                        existingUser = existingCheck.documents[0];
+                    }
+                } catch (checkErr) {
+                    // Continue if check fails
                 }
-            );
 
-            // Link to accounts if specified
-            const accountsToLink = userData.accountIds || defaultAccountIds;
-            if (accountsToLink.length > 0) {
-                await linkUserToAccounts(newUser.$id, accountsToLink);
+                if (existingUser) {
+                    errors.push({
+                        user: userData,
+                        error: `User with WhatsApp ${userData.whatsapp} already exists`,
+                        type: 'duplicate'
+                    });
+                    continue;
+                }
+
+                const newUser = await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.USERS,
+                    ID.unique(),
+                    {
+                        name: userData.name,
+                        whatsapp: userData.whatsapp,
+                        password_hash: userData.password,
+                        city: userData.city || null,
+                        state: userData.state || null,
+                        country: userData.country || null,
+                        is_active: true,
+                        created_at: new Date().toISOString()
+                    }
+                );
+
+                // Link to accounts if specified
+                const accountsToLink = userData.accountIds || defaultAccountIds;
+                if (accountsToLink.length > 0) {
+                    try {
+                        await linkUserToAccounts(newUser.$id, accountsToLink);
+                    } catch (linkErr) {
+                        console.error('Error linking accounts for user:', userData.name, linkErr);
+                        // User created but linking failed - still count as success
+                    }
+                }
+
+                results.push({ ...newUser, id: newUser.$id });
+            } catch (err) {
+                console.error('Error creating user:', userData.name, err);
+                errors.push({
+                    user: userData,
+                    error: err.message || 'Unknown error',
+                    type: 'create_failed'
+                });
             }
+        }
 
-            results.push({ ...newUser, id: newUser.$id });
-        } catch (err) {
-            errors.push({ user: userData, error: err.message });
+        // Report progress if callback provided
+        if (onProgress) {
+            const processed = Math.min(i + BATCH_SIZE, users.length);
+            onProgress({
+                processed,
+                total: users.length,
+                successCount: results.length,
+                errorCount: errors.length
+            });
+        }
+
+        // Add delay between batches to prevent rate limiting
+        if (i + BATCH_SIZE < users.length) {
+            await delay(DELAY_BETWEEN_BATCHES);
         }
     }
 
@@ -549,17 +636,33 @@ export const getAllPrayers = async () => {
 };
 
 export const approvePrayer = async (id, moderatorId = null) => {
-    const response = await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.PRAYERS,
-        id,
-        {
-            status: 'approved',
-            approved_at: new Date().toISOString(),
-            approved_by: moderatorId
+    try {
+        // Try with full update including approved_at and approved_by
+        const response = await databases.updateDocument(
+            DATABASE_ID,
+            COLLECTIONS.PRAYERS,
+            id,
+            {
+                status: 'approved',
+                approved_at: new Date().toISOString(),
+                approved_by: moderatorId
+            }
+        );
+        return { ...response, id: response.$id };
+    } catch (err) {
+        // If the error is about unknown attributes, try with just status
+        if (err.message && (err.message.includes('Unknown attribute') || err.message.includes('unknown_attribute'))) {
+            console.warn('Prayer schema missing approved_at/approved_by fields, updating status only.');
+            const response = await databases.updateDocument(
+                DATABASE_ID,
+                COLLECTIONS.PRAYERS,
+                id,
+                { status: 'approved' }
+            );
+            return { ...response, id: response.$id };
         }
-    );
-    return { ...response, id: response.$id };
+        throw err; // Re-throw if it's a different error
+    }
 };
 
 export const rejectPrayer = async (id) => {

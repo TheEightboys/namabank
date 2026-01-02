@@ -23,7 +23,19 @@ const LandingPage = () => {
             let accountCount = 0;
             let fallbackUserCount = 0;
 
-            // 1. Fetch Nama Entries (Core Stats)
+            // 1. Fetch Active Accounts Count (for Sankalpas)
+            try {
+                const accountsResponse = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.NAMA_ACCOUNTS,
+                    [Query.equal('is_active', true), Query.limit(100)]
+                );
+                accountCount = accountsResponse.total || accountsResponse.documents.length;
+            } catch (err) {
+                console.error('Error fetching accounts count:', err);
+            }
+
+            // 2. Fetch Nama Entries (Core Stats)
             try {
                 const namaResponse = await databases.listDocuments(
                     DATABASE_ID,
@@ -39,9 +51,6 @@ const LandingPage = () => {
                     return sum + (isNaN(devotees) || devotees === 0 ? 1 : devotees);
                 }, 0) || 0;
 
-                const activeAccountIds = new Set(namaResponse.documents?.map(entry => entry.account_id).filter(Boolean));
-                accountCount = activeAccountIds.size;
-
                 // Calculate fallback user count from unique user_ids in entries
                 const uniqueUserIds = new Set(namaResponse.documents?.map(entry => entry.user_id).filter(Boolean));
                 fallbackUserCount = uniqueUserIds.size;
@@ -50,7 +59,7 @@ const LandingPage = () => {
                 console.error('Error fetching nama stats:', err);
             }
 
-            // 2. Fetch Total Users (Optional/Permission Sensitive)
+            // 3. Fetch Total Users (Optional/Permission Sensitive)
             try {
                 const usersResponse = await databases.listDocuments(
                     DATABASE_ID,

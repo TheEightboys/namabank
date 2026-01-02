@@ -113,7 +113,7 @@ const BookshelfPage = () => {
                         <h2>Most Viewed</h2>
                         <div className="shelf-scroll">
                             {mostViewed.map(book => (
-                                <Link to={`/books/${book.id}`} key={book.id} className="book-card featured">
+                                <a href={`/books/${book.id}`} key={book.id} className="book-card featured" target="_blank" rel="noopener noreferrer">
                                     <div className="book-cover">
                                         <div className="book-spine"></div>
                                         <div className="book-content">
@@ -127,7 +127,7 @@ const BookshelfPage = () => {
                                         <h4>{book.title}</h4>
                                         <span className="view-count">👁 {book.view_count} reads</span>
                                     </div>
-                                </Link>
+                                </a>
                             ))}
                         </div>
                     </section>
@@ -178,7 +178,7 @@ const BookshelfPage = () => {
                     ) : (
                         <div className="books-grid">
                             {books.map(book => (
-                                <Link to={`/books/${book.id}`} key={book.id} className="book-card">
+                                <a href={`/books/${book.id}`} key={book.id} className="book-card" target="_blank" rel="noopener noreferrer">
                                     <div className="book-cover plain">
                                         <div className="book-spine"></div>
                                         <div className="book-content">
@@ -195,7 +195,7 @@ const BookshelfPage = () => {
                                         </div>
                                         <span className="location-tag">{book.city}, {book.country}</span>
                                     </div>
-                                </Link>
+                                </a>
                             ))}
                         </div>
                     )}

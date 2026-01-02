@@ -65,7 +65,7 @@ const AudioPlayerPage = () => {
                     title: file.name.replace(/\.[^/.]+$/, '').replace('NamaJapa_', '').replace(/_/g, ' '),
                     src: urlString,
                     isNamaJapa: isNamaJapa,
-                    maxLoops: isNamaJapa ? 4 : 1
+                    maxLoops: 0  // 0 means infinite looping
                 };
             });
             setAudioFiles(files);
@@ -96,9 +96,9 @@ const AudioPlayerPage = () => {
     useEffect(() => { maxLoopsRef.current = selectedAudio?.maxLoops || 1; }, [selectedAudio]);
     useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-    // Handle Audio Ended
+    // Handle Audio Ended - Loop infinitely until user stops
     const handleAudioEnded = () => {
-        console.log('Audio ended - current loop:', loopCountRef.current, 'max:', maxLoopsRef.current);
+        console.log('Audio ended - current loop:', loopCountRef.current);
         const newCount = loopCountRef.current + 1;
         setLoopCount(newCount);
 
@@ -106,14 +106,10 @@ const AudioPlayerPage = () => {
             setNamaCount(prev => prev + 4);
         }
 
-        if (newCount >= maxLoopsRef.current) {
-            setIsPlaying(false);
-            setIsPaused(false);
-        } else {
-            if (isPlayingRef.current && audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(err => console.log('Replay failed:', err));
-            }
+        // Always loop - only stop when user manually stops
+        if (isPlayingRef.current && audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(err => console.log('Replay failed:', err));
         }
     };
 
@@ -327,8 +323,8 @@ const AudioPlayerPage = () => {
                                                 }}>{index + 1}</span>
                                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                     <span className="audio-title" style={{ fontWeight: '600' }}>{audio.title}</span>
-                                                    <span className="audio-type-badge" style={{ fontSize: '0.7rem', color: audio.isNamaJapa ? '#FF6600' : '#2E7D32', marginTop: '2px' }}>
-                                                        {audio.isNamaJapa ? '🔁 4x Loop' : '▶️ Plays Once'}
+                                                    <span className="audio-type-badge" style={{ fontSize: '0.7rem', color: '#FF6600', marginTop: '2px' }}>
+                                                        🔁 Infinite Loop (until stopped)
                                                     </span>
                                                 </div>
                                             </div>
@@ -411,7 +407,7 @@ const AudioPlayerPage = () => {
                                             <div className="counter-label">Namas Counted</div>
                                         </div>
                                         <div className="loop-info">
-                                            <span className="loop-count">{selectedAudio ? (selectedAudio.isNamaJapa ? `${loopCount} / 4 loops` : `${loopCount} plays`) : '-'}</span>
+                                            <span className="loop-count">{loopCount} loops (infinite)</span>
                                         </div>
                                     </div>
                                 </>
@@ -440,7 +436,7 @@ const AudioPlayerPage = () => {
 
                             {inputMode === 'nama' && (
                                 <div className="audio-info">
-                                    <p>Audio loops continuously. Each loop adds <strong>+4</strong> to your count. Stop & Submit when done!</p>
+                                    <p>Audio loops <strong>infinitely</strong>. Each loop adds <strong>+4</strong> to your count. Press Stop when done!</p>
                                 </div>
                             )}
                         </div>

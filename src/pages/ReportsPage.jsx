@@ -133,22 +133,49 @@ const ReportsPage = () => {
                             {/* Stats Overview */}
                             <section className="report-section">
                                 <h2>Consolidated Totals</h2>
-                                <div className="stats-grid stats-grid-5">
+                                <div className="stats-grid stats-grid-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                                     <div className="stat-card">
                                         <div className="stat-value">{formatNumber(stats?.today)}</div>
                                         <div className="stat-label">Today</div>
+                                        <div className="stat-date" style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
+                                            {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </div>
                                     </div>
                                     <div className="stat-card">
-                                        <div className="stat-value">{formatNumber(stats?.thisWeek)}</div>
-                                        <div className="stat-label">This Week</div>
+                                        <div className="stat-value">{formatNumber(stats?.currentWeek)}</div>
+                                        <div className="stat-label">Current Week</div>
+                                        <div className="stat-date" style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
+                                            {(() => {
+                                                const now = new Date();
+                                                const day = now.getDay();
+                                                const monday = new Date(now);
+                                                monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+                                                const sunday = new Date(monday);
+                                                sunday.setDate(monday.getDate() + 6);
+                                                return `${monday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}`;
+                                            })()}
+                                        </div>
                                     </div>
                                     <div className="stat-card">
-                                        <div className="stat-value">{formatNumber(stats?.thisMonth)}</div>
-                                        <div className="stat-label">This Month</div>
+                                        <div className="stat-value">{formatNumber(stats?.currentMonth)}</div>
+                                        <div className="stat-label">Current Month</div>
+                                        <div className="stat-date" style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
+                                            {new Date().toLocaleDateString('en-IN', { month: 'long' })}
+                                        </div>
                                     </div>
                                     <div className="stat-card">
-                                        <div className="stat-value">{formatNumber(stats?.thisYear)}</div>
-                                        <div className="stat-label">This Year</div>
+                                        <div className="stat-value">{formatNumber(stats?.currentYear)}</div>
+                                        <div className="stat-label">Current Year</div>
+                                        <div className="stat-date" style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
+                                            {new Date().getFullYear()}
+                                        </div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="stat-value">{formatNumber(stats?.previousYear)}</div>
+                                        <div className="stat-label">Previous Year</div>
+                                        <div className="stat-date" style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
+                                            {new Date().getFullYear() - 1}
+                                        </div>
                                     </div>
                                     <div className="stat-card highlight">
                                         <div className="stat-value">{formatNumber(stats?.overall)}</div>

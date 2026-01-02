@@ -292,7 +292,19 @@ const PublicReportsPage = () => {
             const usersResponse = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USERS, [Query.limit(1)]);
             const entriesResponse = await databases.listDocuments(DATABASE_ID, COLLECTIONS.NAMA_ENTRIES, [Query.limit(10000)]);
             const total = entriesResponse.documents.reduce((sum, e) => sum + (e.count || 0), 0);
-            setTotalStats({ users: usersResponse.total, entries: entriesResponse.total, total });
+
+            // Calculate devotees consistently with LandingPage.jsx
+            const devoteesChanted = entriesResponse.documents.reduce((sum, entry) => {
+                const devotees = parseInt(entry.devotee_count);
+                return sum + (isNaN(devotees) || devotees === 0 ? 1 : devotees);
+            }, 0);
+
+            setTotalStats({
+                users: usersResponse.total,
+                entries: entriesResponse.total,
+                total,
+                devotees: devoteesChanted
+            });
         } catch (err) {
             console.error('Error loading total stats:', err);
         }
@@ -379,7 +391,7 @@ const PublicReportsPage = () => {
                             <div className="stat-label">Total Namas</div>
                         </div>
                         <div className="stat-card">
-                            <div className="stat-value">{formatNumber(totalStats.users)}</div>
+                            <div className="stat-value">{formatNumber(totalStats.devotees || totalStats.users)}</div>
                             <div className="stat-label">Devotees</div>
                         </div>
                         <div className="stat-card">

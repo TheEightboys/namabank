@@ -453,21 +453,40 @@ const AdminDashboardPage = () => {
 
     // Bulk upload handler
     const handleBulkUpload = async (users) => {
+        setLoading(true);
         try {
             const { results, errors: uploadErrors } = await import('../services/namaService')
-                .then(module => module.bulkCreateUsers(users));
+                .then(module => module.bulkCreateUsers(users, users[0]?.accountIds || []));
 
             if (results.length > 0) {
                 success(`Successfully added ${results.length} devotees!`);
             }
+
             if (uploadErrors.length > 0) {
-                error(`${uploadErrors.length} devotees failed to upload`);
+                // Show detailed error information
+                const duplicates = uploadErrors.filter(e => e.type === 'duplicate').length;
+                const createFailed = uploadErrors.filter(e => e.type === 'create_failed');
+
+                if (duplicates > 0) {
+                    error(`${duplicates} devotees were skipped (already exist)`);
+                }
+                if (createFailed.length > 0) {
+                    const errorDetails = createFailed.slice(0, 3).map(e => `${e.user.name}: ${e.error}`).join('; ');
+                    error(`${createFailed.length} devotees failed: ${errorDetails}`);
+                }
+            }
+
+            if (results.length === 0 && uploadErrors.length === 0) {
+                error('No users were processed. Please check your file.');
             }
 
             setShowBulkUploadModal(false);
             loadData();
         } catch (err) {
-            error('Bulk upload failed. Please try again.');
+            console.error('Bulk upload failed:', err);
+            error(`Bulk upload failed: ${err.message || 'Please try again.'}`);
+        } finally {
+            setLoading(false);
         }
     };
 
