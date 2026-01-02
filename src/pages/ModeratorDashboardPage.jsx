@@ -505,8 +505,8 @@ const ModeratorDashboardPage = () => {
 
     const exportToCSV = () => {
         const statsToExport = getFilteredStats();
-        const headers = ['Account Name', 'Today', 'This Week', 'This Month', 'This Year', 'Overall'];
-        const rows = statsToExport.map(a => [a.name, a.today, a.thisWeek, a.thisMonth, a.thisYear, a.overall]);
+        const headers = ['Account Name', 'Today', 'Current Week', 'Current Month', 'Current Year', 'Overall'];
+        const rows = statsToExport.map(a => [a.name, a.today, a.currentWeek, a.currentMonth, a.currentYear, a.overall]);
         const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -523,8 +523,8 @@ const ModeratorDashboardPage = () => {
 
         // 1. Summary Sheet
         const wsSummary = XLSX.utils.json_to_sheet(statsToExport.map(a => ({
-            'Account Name': a.name, 'Today': a.today, 'This Week': a.thisWeek,
-            'This Month': a.thisMonth, 'This Year': a.thisYear, 'Overall': a.overall
+            'Account Name': a.name, 'Today': a.today, 'Current Week': a.currentWeek,
+            'Current Month': a.currentMonth, 'Current Year': a.currentYear, 'Overall': a.overall
         })));
         XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
 
@@ -641,7 +641,7 @@ const ModeratorDashboardPage = () => {
         doc.rect(20, y - 5, pageWidth - 40, 7, 'F');
         doc.text('Account Name', 25, y);
         doc.text('Today', 100, y);
-        doc.text('This Week', 125, y);
+        doc.text('Current Week', 120, y);
         doc.text('Overall', 160, y);
         y += 10;
 
@@ -652,7 +652,7 @@ const ModeratorDashboardPage = () => {
             }
             doc.text(account.name, 25, y);
             doc.text(formatNumber(account.today), 100, y);
-            doc.text(formatNumber(account.thisWeek), 125, y);
+            doc.text(formatNumber(account.currentWeek), 120, y);
             doc.text(formatNumber(account.overall), 160, y);
             doc.setDrawColor(240);
             doc.line(20, y + 2, pageWidth - 20, y + 2);

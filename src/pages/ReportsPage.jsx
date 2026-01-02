@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUserStats, getUserRecentEntries } from '../services/namaService';
+import { getUserStats, getUserRecentEntries, getUserEntriesByDateRange } from '../services/namaService';
 import * as XLSX from 'xlsx';
 import './ReportsPage.css';
 
@@ -12,6 +12,12 @@ const ReportsPage = () => {
     const [stats, setStats] = useState(null);
     const [recentEntries, setRecentEntries] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Date range filter state
+    const [dateRangeStart, setDateRangeStart] = useState('');
+    const [dateRangeEnd, setDateRangeEnd] = useState('');
+    const [dateRangeTotal, setDateRangeTotal] = useState(null);
+    const [dateRangeLoading, setDateRangeLoading] = useState(false);
 
     useEffect(() => {
         if (!user) {
@@ -44,6 +50,62 @@ const ReportsPage = () => {
             month: 'short',
             year: 'numeric'
         });
+    };
+
+    // Date range calculation handler
+    const handleDateRangeSearch = async () => {
+        if (!dateRangeStart || !dateRangeEnd) return;
+
+        setDateRangeLoading(true);
+        try {
+            const result = await getUserEntriesByDateRange(user.$id, dateRangeStart, dateRangeEnd);
+            setDateRangeTotal(result.total);
+        } catch (err) {
+            console.error('Error fetching date range:', err);
+            setDateRangeTotal(0);
+        } finally {
+            setDateRangeLoading(false);
+        }
+    };
+
+    // Quick date range setters
+    const setQuickRange = (type) => {
+        const now = new Date();
+        let start, end;
+
+        switch (type) {
+            case 'week':
+                const dayOfWeek = now.getDay();
+                start = new Date(now);
+                start.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+                end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                break;
+            case 'month':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                break;
+            case 'year':
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31);
+                break;
+            case 'last7':
+                end = new Date(now);
+                start = new Date(now);
+                start.setDate(now.getDate() - 6);
+                break;
+            case 'last30':
+                end = new Date(now);
+                start = new Date(now);
+                start.setDate(now.getDate() - 29);
+                break;
+            default:
+                return;
+        }
+
+        setDateRangeStart(start.toISOString().split('T')[0]);
+        setDateRangeEnd(end.toISOString().split('T')[0]);
+        setDateRangeTotal(null);
     };
 
     const exportToExcel = () => {
@@ -184,7 +246,112 @@ const ReportsPage = () => {
                                 </div>
                             </section>
 
-                            {/* Recent Entries */}
+                            {/* Date Range Calculator */}
+                            <section className="report-section" style={{ background: 'var(--cream-light, #fdf8f3)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
+                                <h2 style={{ marginBottom: '1rem' }}>📅 Custom Date Range</h2>
+                                <p style={{ color: '#666', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                    Select a date range to see your total Nama contributions
+                                </p>
+
+                                {/* Quick Range Buttons */}
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setQuickRange('last7')}
+                                        style={{ fontSize: '0.8rem' }}
+                                    >
+                                        Last 7 Days
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setQuickRange('last30')}
+                                        style={{ fontSize: '0.8rem' }}
+                                    >
+                                        Last 30 Days
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setQuickRange('week')}
+                                        style={{ fontSize: '0.8rem' }}
+                                    >
+                                        This Week
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setQuickRange('month')}
+                                        style={{ fontSize: '0.8rem' }}
+                                    >
+                                        This Month
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => setQuickRange('year')}
+                                        style={{ fontSize: '0.8rem' }}
+                                    >
+                                        This Year
+                                    </button>
+                                </div>
+
+                                {/* Custom Date Inputs */}
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: 1, minWidth: '140px' }}>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>From Date</label>
+                                        <input
+                                            type="date"
+                                            value={dateRangeStart}
+                                            onChange={(e) => { setDateRangeStart(e.target.value); setDateRangeTotal(null); }}
+                                            className="form-input"
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: '140px' }}>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>To Date</label>
+                                        <input
+                                            type="date"
+                                            value={dateRangeEnd}
+                                            onChange={(e) => { setDateRangeEnd(e.target.value); setDateRangeTotal(null); }}
+                                            className="form-input"
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary"
+                                        onClick={handleDateRangeSearch}
+                                        disabled={!dateRangeStart || !dateRangeEnd || dateRangeLoading}
+                                        style={{ minWidth: '100px' }}
+                                    >
+                                        {dateRangeLoading ? 'Loading...' : 'Calculate'}
+                                    </button>
+                                </div>
+
+                                {/* Results */}
+                                {dateRangeTotal !== null && (
+                                    <div style={{
+                                        marginTop: '1.5rem',
+                                        padding: '1.5rem',
+                                        background: 'linear-gradient(135deg, #FF9933 0%, #FF6600 100%)',
+                                        borderRadius: '12px',
+                                        textAlign: 'center',
+                                        color: 'white'
+                                    }}>
+                                        <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '4px' }}>
+                                            {formatDate(dateRangeStart)} — {formatDate(dateRangeEnd)}
+                                        </div>
+                                        <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
+                                            {formatNumber(dateRangeTotal)}
+                                        </div>
+                                        <div style={{ fontSize: '1rem', opacity: 0.9 }}>
+                                            Total Namas
+                                        </div>
+                                    </div>
+                                )}
+                            </section>
                             <section className="report-section">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                     <h2 style={{ margin: 0 }}>Recent Entries</h2>

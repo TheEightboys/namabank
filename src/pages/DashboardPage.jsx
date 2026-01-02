@@ -36,6 +36,7 @@ const DashboardPage = () => {
     };
 
     const formatNumber = (num) => {
+        if (num == null) return '0';
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
         }
@@ -108,14 +109,25 @@ const DashboardPage = () => {
                                 <div className="stat-card">
                                     <div className="stat-value">{formatNumber(stats.today)}</div>
                                     <div className="stat-label">Today</div>
+                                    <div className="stat-date">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value">{formatNumber(stats.thisWeek)}</div>
-                                    <div className="stat-label">This Week</div>
+                                    <div className="stat-value">{formatNumber(stats.currentWeek)}</div>
+                                    <div className="stat-label">Current Week</div>
+                                    <div className="stat-date">{(() => {
+                                        const now = new Date();
+                                        const day = now.getDay();
+                                        const monday = new Date(now);
+                                        monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+                                        const sunday = new Date(monday);
+                                        sunday.setDate(monday.getDate() + 6);
+                                        return `${monday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })} - ${sunday.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}`;
+                                    })()}</div>
                                 </div>
                                 <div className="stat-card">
-                                    <div className="stat-value">{formatNumber(stats.thisMonth)}</div>
-                                    <div className="stat-label">This Month</div>
+                                    <div className="stat-value">{formatNumber(stats.currentMonth)}</div>
+                                    <div className="stat-label">Current Month</div>
+                                    <div className="stat-date">{new Date().toLocaleDateString('en-IN', { month: 'long' })}</div>
                                 </div>
                                 <div className="stat-card highlight">
                                     <div className="stat-value">{formatNumber(stats.overall)}</div>

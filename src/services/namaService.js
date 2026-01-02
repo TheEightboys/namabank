@@ -245,6 +245,51 @@ export const getUserStats = async (userId) => {
     return stats;
 };
 
+// Get user entries by date range for custom filtering
+export const getUserEntriesByDateRange = async (userId, startDate, endDate) => {
+    if (!userId || !startDate || !endDate) {
+        return { entries: [], total: 0 };
+    }
+
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.NAMA_ENTRIES,
+        [
+            Query.equal('user_id', userId),
+            Query.greaterThanEqual('entry_date', startDate),
+            Query.lessThanEqual('entry_date', endDate),
+            Query.orderDesc('entry_date'),
+            Query.limit(1000)
+        ]
+    );
+
+    const entries = response.documents || [];
+    const total = entries.reduce((sum, e) => sum + (e.count || 0), 0);
+
+    // Get account names
+    const accountIds = [...new Set(entries.map(e => e.account_id))];
+    const accountsMap = {};
+    if (accountIds.length > 0) {
+        const accountsResponse = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.NAMA_ACCOUNTS,
+            [Query.limit(100)]
+        );
+        accountsResponse.documents.forEach(acc => {
+            accountsMap[acc.$id] = acc;
+        });
+    }
+
+    return {
+        entries: entries.map(entry => ({
+            ...entry,
+            id: entry.$id,
+            nama_accounts: accountsMap[entry.account_id] ? { name: accountsMap[entry.account_id].name } : null
+        })),
+        total
+    };
+};
+
 // ============================================
 // Admin Services
 // ============================================
