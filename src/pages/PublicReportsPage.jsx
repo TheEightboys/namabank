@@ -24,6 +24,14 @@ const PublicReportsPage = () => {
     const [totalStats, setTotalStats] = useState({ users: 0, entries: 0, total: 0 });
     const [recentEntries, setRecentEntries] = useState([]);
 
+    // Previous Year selection
+    const currentYear = new Date().getFullYear();
+    const [selectedPreviousYear, setSelectedPreviousYear] = useState(currentYear - 1);
+    const [showYearPicker, setShowYearPicker] = useState(false);
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+    const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - 1 - i); // Last 6 years
+
     useEffect(() => {
         loadAllData();
     }, []);
@@ -50,9 +58,50 @@ const PublicReportsPage = () => {
         }
     };
 
-    const loadAccountStats = async () => {
+    const loadAccountStats = async (rangeOverride = null) => {
+        let title = 'Previous Year';
+        let startDate, endDate;
+
+        if (rangeOverride && rangeOverride.type === 'custom') {
+            startDate = rangeOverride.start;
+            endDate = rangeOverride.end;
+            title = 'Custom Period';
+        } else {
+            const year = (rangeOverride && rangeOverride.year) || selectedPreviousYear;
+            startDate = `${year}-01-01`;
+            endDate = `${year}-12-31`;
+            title = year === (currentYear - 1) ? 'Previous Year' : `${year}`;
+        }
+
+        // Get base stats
         const data = await getAccountStats();
-        setAccountStats(data || []);
+
+        // Calculate previous year/period stats for each account
+        try {
+            const entriesResponse = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.NAMA_ENTRIES,
+                [Query.limit(10000)]
+            );
+
+            const enhancedStats = (data || []).map(account => {
+                const accountEntries = entriesResponse.documents.filter(e => e.account_id === account.id);
+                const previousYearCount = accountEntries
+                    .filter(e => e.entry_date >= startDate && e.entry_date <= endDate)
+                    .reduce((sum, e) => sum + (e.count || 0), 0);
+
+                return {
+                    ...account,
+                    previousYear: previousYearCount,
+                    comparisonTitle: title
+                };
+            });
+
+            setAccountStats(enhancedStats);
+        } catch (err) {
+            console.error('Error loading previous year stats:', err);
+            setAccountStats(data || []);
+        }
     };
 
     const loadRecentUsers = async () => {
@@ -493,6 +542,96 @@ const PublicReportsPage = () => {
                                                 {new Date().getFullYear()}
                                             </div>
                                         </th>
+                                        <th style={{ position: 'relative' }}>
+                                            <div
+                                                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}
+                                                onClick={() => setShowYearPicker(!showYearPicker)}
+                                            >
+                                                {accountStats[0]?.comparisonTitle || 'Previous Year'}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                                </svg>
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'normal', textAlign: 'center' }}>
+                                                {selectedPreviousYear === 'custom' ? 'Custom Range' : selectedPreviousYear}
+                                            </div>
+                                            {showYearPicker && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    background: 'white',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '8px',
+                                                    padding: '8px',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                    zIndex: 100,
+                                                    minWidth: '180px'
+                                                }}>
+                                                    {availableYears.map(year => (
+                                                        <div
+                                                            key={year}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedPreviousYear(year);
+                                                                setShowYearPicker(false);
+                                                                loadAccountStats({ year });
+                                                            }}
+                                                            className="year-option"
+                                                            style={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                borderRadius: '4px',
+                                                                background: year === selectedPreviousYear ? '#FF9933' : 'transparent',
+                                                                color: year === selectedPreviousYear ? 'white' : '#333',
+                                                                marginBottom: '4px'
+                                                            }}
+                                                        >
+                                                            {year}
+                                                        </div>
+                                                    ))}
+                                                    <div className="year-separator" style={{ height: '1px', background: '#eee', margin: '4px 0' }}></div>
+                                                    <div
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{ padding: '8px', background: '#f9f9f9', borderRadius: '4px' }}
+                                                    >
+                                                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '4px' }}>Custom Range</div>
+                                                        <input
+                                                            type="date"
+                                                            value={customStartDate}
+                                                            onChange={(e) => setCustomStartDate(e.target.value)}
+                                                            style={{ width: '100%', marginBottom: '4px', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                                            placeholder="Start Date"
+                                                        />
+                                                        <input
+                                                            type="date"
+                                                            value={customEndDate}
+                                                            onChange={(e) => setCustomEndDate(e.target.value)}
+                                                            style={{ width: '100%', marginBottom: '4px', padding: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                                            placeholder="End Date"
+                                                        />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (customStartDate && customEndDate) {
+                                                                    setSelectedPreviousYear('custom');
+                                                                    setShowYearPicker(false);
+                                                                    loadAccountStats({ type: 'custom', start: customStartDate, end: customEndDate });
+                                                                }
+                                                            }}
+                                                            className="btn btn-sm btn-primary"
+                                                            style={{ width: '100%', marginTop: '4px', padding: '4px' }}
+                                                        >
+                                                            Apply
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </th>
                                         <th>Overall</th>
                                     </tr>
                                 </thead>
@@ -504,6 +643,7 @@ const PublicReportsPage = () => {
                                             <td>{formatNumber(account.currentWeek)}</td>
                                             <td>{formatNumber(account.currentMonth)}</td>
                                             <td>{formatNumber(account.currentYear)}</td>
+                                            <td>{formatNumber(account.previousYear || 0)}</td>
                                             <td className="highlight-cell">{formatNumber(account.overall)}</td>
                                         </tr>
                                     ))}

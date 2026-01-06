@@ -565,14 +565,17 @@ export const bulkCreateUsers = async (users, defaultAccountIds = [], onProgress 
                     continue;
                 }
 
+                console.log('Creating user with data:', userData); // Debug log
+
                 const newUser = await databases.createDocument(
                     DATABASE_ID,
                     COLLECTIONS.USERS,
                     ID.unique(),
                     {
                         name: userData.name,
+                        email: userData.email || `${userData.whatsapp.replace(/[^0-9]/g, '')}@namavruksha.org`, // Safety net
                         whatsapp: userData.whatsapp,
-                        password_hash: userData.password,
+                        password: userData.password, // Corrected attribute name
                         city: userData.city || null,
                         state: userData.state || null,
                         country: userData.country || null,
@@ -636,20 +639,37 @@ export const submitPrayer = async (prayerData, userId = null) => {
         prayer_text: prayerData.prayer_text,
         email_notifications: prayerData.email_notifications || false,
         status: 'pending',
-        prayer_count: 0
+        created_at: new Date().toISOString()
     };
 
     if (userId) {
         data.user_id = userId;
     }
 
-    const response = await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.PRAYERS,
-        ID.unique(),
-        data
-    );
-    return { ...response, id: response.$id };
+    // Try with prayer_count first, fall back without it if attribute doesn't exist
+    try {
+        data.prayer_count = 0;
+        const response = await databases.createDocument(
+            DATABASE_ID,
+            COLLECTIONS.PRAYERS,
+            ID.unique(),
+            data
+        );
+        return { ...response, id: response.$id };
+    } catch (err) {
+        // If prayer_count attribute doesn't exist, try without it
+        if (err.message && (err.message.includes('prayer_count') || err.message.includes('unknown_attribute'))) {
+            delete data.prayer_count;
+            const response = await databases.createDocument(
+                DATABASE_ID,
+                COLLECTIONS.PRAYERS,
+                ID.unique(),
+                data
+            );
+            return { ...response, id: response.$id };
+        }
+        throw err;
+    }
 };
 
 export const getApprovedPrayers = async () => {
@@ -681,16 +701,21 @@ export const getAllPrayers = async () => {
 
 export const approvePrayer = async (id, moderatorId = null) => {
     try {
+        const updateData = {
+            status: 'approved',
+            approved_at: new Date().toISOString()
+        };
+
+        if (moderatorId) {
+            updateData.approved_by = moderatorId;
+        }
+
         // Try with full update including approved_at and approved_by
         const response = await databases.updateDocument(
             DATABASE_ID,
             COLLECTIONS.PRAYERS,
             id,
-            {
-                status: 'approved',
-                approved_at: new Date().toISOString(),
-                approved_by: moderatorId
-            }
+            updateData
         );
         return { ...response, id: response.$id };
     } catch (err) {
@@ -720,16 +745,27 @@ export const rejectPrayer = async (id) => {
 };
 
 export const incrementPrayerCount = async (id) => {
-    // Fetch current count
-    const prayer = await databases.getDocument(DATABASE_ID, COLLECTIONS.PRAYERS, id);
+    try {
+        // Fetch current count
+        const prayer = await databases.getDocument(DATABASE_ID, COLLECTIONS.PRAYERS, id);
 
-    const response = await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.PRAYERS,
-        id,
-        { prayer_count: (prayer.prayer_count || 0) + 1 }
-    );
-    return { ...response, id: response.$id };
+        const response = await databases.updateDocument(
+            DATABASE_ID,
+            COLLECTIONS.PRAYERS,
+            id,
+            { prayer_count: (prayer.prayer_count || 0) + 1 }
+        );
+        return { ...response, id: response.$id };
+    } catch (err) {
+        // Handle missing prayer_count attribute gracefully
+        if (err.message && err.message.includes('prayer_count')) {
+            console.warn('SCHEMA NOTE: The "prayer_count" attribute needs to be added to the PRAYERS collection in Appwrite Console.');
+            console.warn('Add an Integer attribute named "prayer_count" with default value 0 and make it optional.');
+            // Return a mock response so UI can still update locally
+            throw new Error('Please add "prayer_count" (Integer, optional, default: 0) attribute to PRAYERS collection in Appwrite Console.');
+        }
+        throw err;
+    }
 };
 
 // ============================================
@@ -1102,4 +1138,51 @@ export const getImageFiles = async (bucketId) => {
         console.error('Error fetching image files:', error);
         return [];
     }
+};
+
+// ============================================
+// Feedback & Suggestions Service
+// ============================================
+
+export const submitFeedback = async (feedbackData, userId = null) => {
+    const data = {
+        type: feedbackData.type || 'general', // 'sankalpa_suggestion', 'feedback', 'bug_report'
+        subject: feedbackData.subject,
+        message: feedbackData.message,
+        user_name: feedbackData.userName || null,
+        user_contact: feedbackData.userContact || null,
+        status: 'pending', // 'pending', 'reviewed', 'implemented'
+        created_at: new Date().toISOString()
+    };
+
+    if (userId) {
+        data.user_id = userId;
+    }
+
+    const response = await databases.createDocument(
+        DATABASE_ID,
+        COLLECTIONS.FEEDBACK,
+        ID.unique(),
+        data
+    );
+    return { ...response, id: response.$id };
+};
+
+export const getAllFeedback = async () => {
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.FEEDBACK,
+        [Query.orderDesc('created_at')]
+    );
+    return response.documents.map(doc => ({ ...doc, id: doc.$id })) || [];
+};
+
+export const updateFeedbackStatus = async (id, status) => {
+    const response = await databases.updateDocument(
+        DATABASE_ID,
+        COLLECTIONS.FEEDBACK,
+        id,
+        { status }
+    );
+    return { ...response, id: response.$id };
 };

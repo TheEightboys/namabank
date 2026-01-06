@@ -34,7 +34,8 @@ export const COLLECTIONS = {
     BOOKS: 'books',
     ACCOUNT_DELETION_REQUESTS: 'account_deletion_requests',
     USER_DELETION_REQUESTS: 'user_deletion_requests',
-    PASSWORD_RESETS: 'password_resets'
+    PASSWORD_RESETS: 'password_resets',
+    FEEDBACK: 'feedback'
 };
 
 // Initialize Appwrite Client

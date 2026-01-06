@@ -48,9 +48,32 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
                 const normalizedData = jsonData.map(row => {
                     const normalized = {};
                     Object.keys(row).forEach(key => {
-                        const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
+                        let normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
+
+                        // Map aliases
+                        if (['mobile', 'phone', 'contact', 'mob_number', 'mobile_number'].includes(normalizedKey)) {
+                            normalizedKey = 'whatsapp';
+                        }
+                        if (['fullname', 'full_name', 'user_name', 'devotee_name'].includes(normalizedKey)) {
+                            normalizedKey = 'name';
+                        }
+                        if (['pass', 'pwd'].includes(normalizedKey)) {
+                            normalizedKey = 'password';
+                        }
+                        if (['mail', 'e-mail', 'email_id'].includes(normalizedKey)) {
+                            normalizedKey = 'email';
+                        }
+
                         normalized[normalizedKey] = String(row[key]).trim();
                     });
+
+                    // Auto-generate email if missing but whatsapp exists
+                    if (!normalized.email && normalized.whatsapp) {
+                        // Remove special chars from whatsapp for cleaner email
+                        const cleanPhone = normalized.whatsapp.replace(/[^0-9]/g, '');
+                        normalized.email = `${cleanPhone}@namavruksha.org`;
+                    }
+
                     return normalized;
                 });
 
@@ -58,7 +81,18 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
                 const firstRow = normalizedData[0];
                 const missingCols = requiredColumns.filter(col => !(col in firstRow));
                 if (missingCols.length > 0) {
-                    setErrors([`Missing required columns: ${missingCols.join(', ')}`]);
+                    const columnHints = {
+                        name: 'Name (or: FullName, Full_Name, User_Name, Devotee_Name)',
+                        whatsapp: 'WhatsApp (or: Mobile, Phone, Contact, Mob_Number, Mobile_Number)',
+                        password: 'Password (or: Pass, Pwd)'
+                    };
+                    const missingDetails = missingCols.map(col => columnHints[col] || col);
+                    setErrors([
+                        `Missing required columns: ${missingCols.join(', ')}`,
+                        `Expected column names: ${missingDetails.join(', ')}`,
+                        'Please check your Excel file has headers matching these column names.'
+                    ]);
+                    setPreviewData([]);
                     setLoading(false);
                     return;
                 }
@@ -124,6 +158,7 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
     const downloadTemplate = () => {
         const templateData = [{
             Name: 'Example User',
+            Email: 'example@email.com',
             WhatsApp: '+919876543210',
             Password: 'password123',
             City: 'Chennai',
@@ -141,6 +176,26 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
             <div className="upload-header">
                 <h3>Bulk Upload Devotees</h3>
                 <p>Upload an Excel file with devotee information</p>
+            </div>
+
+            {/* Column mapping info */}
+            <div style={{
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px',
+                fontSize: '0.85rem'
+            }}>
+                <strong>Required Columns:</strong>
+                <div style={{ marginTop: '4px', color: '#856404' }}>
+                    <span style={{ fontFamily: 'monospace', background: '#ffeeba', padding: '2px 6px', borderRadius: '3px', marginRight: '8px' }}>Name</span>
+                    <span style={{ fontFamily: 'monospace', background: '#ffeeba', padding: '2px 6px', borderRadius: '3px', marginRight: '8px' }}>WhatsApp</span>
+                    <span style={{ fontFamily: 'monospace', background: '#ffeeba', padding: '2px 6px', borderRadius: '3px' }}>Password</span>
+                </div>
+                <div style={{ marginTop: '6px', color: '#6c757d', fontSize: '0.8rem' }}>
+                    Optional/Recommended: Email, City, State, Country
+                </div>
             </div>
 
             <div className="upload-actions">
@@ -184,11 +239,24 @@ const ExcelUpload = ({ onUpload, onClose, accounts }) => {
             )}
 
             {errors.length > 0 && (
-                <div className="upload-errors">
-                    <h4>Validation Errors:</h4>
-                    <ul>
+                <div className="upload-errors" style={{
+                    background: '#f8d7da',
+                    border: '1px solid #f5c6cb',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginTop: '12px'
+                }}>
+                    <h4 style={{ color: '#721c24', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        Validation Errors ({errors.length})
+                    </h4>
+                    <ul style={{ color: '#721c24', marginLeft: '20px', fontSize: '0.85rem' }}>
                         {errors.map((err, i) => (
-                            <li key={i}>{err}</li>
+                            <li key={i} style={{ marginBottom: '4px' }}>{err}</li>
                         ))}
                     </ul>
                 </div>

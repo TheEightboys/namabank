@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUserStats } from '../services/namaService';
+import { useToast } from '../context/ToastContext';
+import { getUserStats, submitFeedback } from '../services/namaService';
+import { sendNotificationEmail } from '../services/emailService';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
     const { user, linkedAccounts, logout } = useAuth();
+    const { success, error } = useToast();
     const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Feedback modal state
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
+    const [feedbackForm, setFeedbackForm] = useState({
+        type: 'sankalpa_suggestion',
+        subject: '',
+        message: ''
+    });
 
     useEffect(() => {
         if (!user) {
@@ -44,6 +56,49 @@ const DashboardPage = () => {
             return (num / 1000).toFixed(1) + 'K';
         }
         return num.toLocaleString();
+    };
+
+    const handleSubmitFeedback = async (e) => {
+        e.preventDefault();
+        if (!feedbackForm.subject.trim() || !feedbackForm.message.trim()) {
+            error('Please fill in all fields');
+            return;
+        }
+
+        setSubmittingFeedback(true);
+        try {
+            await submitFeedback({
+                type: feedbackForm.type,
+                subject: feedbackForm.subject,
+                message: feedbackForm.message,
+                userName: user?.name,
+                userContact: user?.whatsapp || user?.email
+            }, user?.$id);
+
+            // Send email notification to admin/moderator
+            const feedbackTypeMap = {
+                sankalpa_suggestion: 'New Sankalpa Request',
+                feedback: 'General Feedback',
+                bug_report: 'Bug Report'
+            };
+            const typeLabel = feedbackTypeMap[feedbackForm.type] || 'Feedback';
+            const emailSubject = `[Namavruksha] ${typeLabel} from ${user?.name}`;
+            const emailMessage = `Type: ${typeLabel}\nSubject: ${feedbackForm.subject}\nMessage: ${feedbackForm.message}\nUser: ${user?.name} (${user?.whatsapp || user?.email || 'N/A'})`;
+            await sendNotificationEmail({
+                to: 'yogiramsuratkumarbhajans@gmail.com',
+                subject: emailSubject,
+                message: emailMessage
+            });
+
+            success('Thank you! Your suggestion has been submitted.');
+            setFeedbackForm({ type: 'sankalpa_suggestion', subject: '', message: '' });
+            setShowFeedbackModal(false);
+        } catch (err) {
+            console.error('Feedback submission error:', err);
+            error('Failed to submit. Please try again.');
+        } finally {
+            setSubmittingFeedback(false);
+        }
     };
 
     if (!user) return null;
@@ -212,10 +267,87 @@ const DashboardPage = () => {
                                 <h4>Book Shelf</h4>
                                 <p>Read monthly editions</p>
                             </Link>
+
+                            <div className="action-card hover-lift" onClick={() => setShowFeedbackModal(true)} style={{ cursor: 'pointer' }}>
+                                <div className="action-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                </div>
+                                <h4>Suggest Sankalpa</h4>
+                                <p>Request new Namavruksha</p>
+                            </div>
                         </div>
                     </section>
                 </div>
             </main>
+
+            {/* Feedback Modal */}
+            {showFeedbackModal && (
+                <div className="modal-overlay" onClick={() => setShowFeedbackModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Suggest New Sankalpa</h2>
+                            <button className="modal-close" onClick={() => setShowFeedbackModal(false)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleSubmitFeedback}>
+                            <div className="modal-body">
+                                <p style={{ marginBottom: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                                    Would you like a new Namavruksha Sankalpa to be added? Let us know!
+                                </p>
+                                <div className="form-group">
+                                    <label className="form-label">Type</label>
+                                    <select
+                                        value={feedbackForm.type}
+                                        onChange={(e) => setFeedbackForm(prev => ({ ...prev, type: e.target.value }))}
+                                        className="form-input"
+                                    >
+                                        <option value="sankalpa_suggestion">New Sankalpa Request</option>
+                                        <option value="feedback">General Feedback</option>
+                                        <option value="bug_report">Report an Issue</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Subject <span className="required">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={feedbackForm.subject}
+                                        onChange={(e) => setFeedbackForm(prev => ({ ...prev, subject: e.target.value }))}
+                                        className="form-input"
+                                        placeholder="e.g., New Sankalpa for Chennai"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Details <span className="required">*</span></label>
+                                    <textarea
+                                        value={feedbackForm.message}
+                                        onChange={(e) => setFeedbackForm(prev => ({ ...prev, message: e.target.value }))}
+                                        className="form-input"
+                                        rows={4}
+                                        placeholder="Describe the Sankalpa you'd like to see..."
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-ghost" onClick={() => setShowFeedbackModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary" disabled={submittingFeedback}>
+                                    {submittingFeedback ? 'Submitting...' : 'Submit'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <footer className="dashboard-footer">
                 <div className="container">
@@ -227,3 +359,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+

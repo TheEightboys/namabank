@@ -108,6 +108,7 @@ const COLLECTIONS = {
             { type: 'string', key: 'account_id', size: 255, required: false },
             { type: 'string', key: 'prayer_text', size: 2000, required: true },
             { type: 'string', key: 'status', size: 20, required: false },
+            { type: 'integer', key: 'prayer_count', required: false, default: 0 },
             { type: 'datetime', key: 'created_at', required: false }
         ]
     },
