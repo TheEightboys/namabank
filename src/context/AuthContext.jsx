@@ -312,11 +312,14 @@ export const AuthProvider = ({ children }) => {
 
             // 5. Send notification email to admin
             try {
-                const { sendNotificationEmail } = await import('../services/emailService');
-                await sendNotificationEmail({
-                    to: 'yogiramsuratkumarbhajans@gmail.com',
-                    subject: 'New Sankalpa Registration',
-                    message: `A new user has joined Sankalpa.\n\nName: ${userData.name}\nEmail: ${userData.email}\nWhatsApp: ${userData.whatsapp || ''}\nCity: ${userData.city || ''}\nState: ${userData.state || ''}\nCountry: ${userData.country || ''}`
+                const { sendNewRegistrationNotification } = await import('../services/emailService');
+                await sendNewRegistrationNotification({
+                    name: userData.name,
+                    email: userData.email,
+                    whatsapp: userData.whatsapp,
+                    city: userData.city,
+                    state: userData.state,
+                    country: userData.country
                 });
             } catch (emailErr) {
                 console.error('Failed to send admin notification email:', emailErr);

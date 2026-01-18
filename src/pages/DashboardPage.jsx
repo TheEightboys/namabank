@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getUserStats, submitFeedback } from '../services/namaService';
-import { sendNotificationEmail } from '../services/emailService';
+import { sendFeedbackNotification } from '../services/emailService';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
@@ -75,19 +75,13 @@ const DashboardPage = () => {
                 userContact: user?.whatsapp || user?.email
             }, user?.$id);
 
-            // Send email notification to admin/moderator
-            const feedbackTypeMap = {
-                sankalpa_suggestion: 'New Sankalpa Request',
-                feedback: 'General Feedback',
-                bug_report: 'Bug Report'
-            };
-            const typeLabel = feedbackTypeMap[feedbackForm.type] || 'Feedback';
-            const emailSubject = `[Namavruksha] ${typeLabel} from ${user?.name}`;
-            const emailMessage = `Type: ${typeLabel}\nSubject: ${feedbackForm.subject}\nMessage: ${feedbackForm.message}\nUser: ${user?.name} (${user?.whatsapp || user?.email || 'N/A'})`;
-            await sendNotificationEmail({
-                to: 'yogiramsuratkumarbhajans@gmail.com',
-                subject: emailSubject,
-                message: emailMessage
+            // Send email notification to admin using Brevo
+            await sendFeedbackNotification({
+                type: feedbackForm.type,
+                subject: feedbackForm.subject,
+                message: feedbackForm.message,
+                userName: user?.name,
+                userContact: user?.whatsapp || user?.email
             });
 
             success('Thank you! Your suggestion has been submitted.');

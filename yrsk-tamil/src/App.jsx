@@ -4,9 +4,14 @@ import { db } from './firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 function App() {
-  // Match string dates that include time (e.g., "2026-01-15 00:00:00") by bounding the day as strings.
+  // Get today's date in IST timezone (not UTC) to avoid date mismatch issues
   const now = new Date();
-  const day = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  // Convert to IST by adding 5:30 hours offset
+  const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+  const istNow = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60000);
+  const day = istNow.toISOString().slice(0, 10); // YYYY-MM-DD in IST
+  
+  // Match string dates that include time (e.g., "2026-01-15 00:00:00") by bounding the day as strings.
   const start = `${day} 00:00:00`;
   const end = `${day} 23:59:59`;
   const q = query(collection(db, 'quotes'), where('date', '>=', start), where('date', '<=', end));
@@ -56,7 +61,7 @@ function App() {
   return (
     <div className="page">
       <header className="hero">
-        <div className="brand">'பொக்கி ராம்கருத்குமார்'</div>
+        <div className="brand">'யோகி ராம்சுரத்குமார்'</div>
         <div className="subtitle">இன்றைய ஆசீர்வாதம்</div>
       </header>
 

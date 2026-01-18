@@ -90,29 +90,75 @@ export const submitMultipleNamaEntries = async (userId, entries, sourceType = 'm
     const today = new Date().toISOString().split('T')[0];
     const results = [];
 
-    for (const entry of entries) {
-        try {
-            const entryData = {
-                user_id: userId,
-                account_id: entry.accountId,
-                count: parseInt(entry.count) || 0, // Ensure count is an integer
-                source_type: sourceType,
-                entry_date: today,
-                created_at: new Date().toISOString()
-            };
+    // Helper function to get all dates between start and end (inclusive)
+    const getDateRange = (start, end) => {
+        const dates = [];
+        const startD = new Date(start);
+        const endD = new Date(end);
+        
+        // Ensure we're working with valid dates
+        if (isNaN(startD.getTime()) || isNaN(endD.getTime())) {
+            return [today]; // Fallback to today if dates are invalid
+        }
+        
+        let current = new Date(startD);
+        while (current <= endD) {
+            dates.push(current.toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 1);
+        }
+        return dates.length > 0 ? dates : [today];
+    };
 
-            // Only add dates if they have actual values (not empty strings)
-            // Appwrite expects dates in ISO format or as date strings
-            if (startDate && typeof startDate === 'string' && startDate.trim() !== '') {
-                entryData.start_date = startDate;
-            }
-            if (endDate && typeof endDate === 'string' && endDate.trim() !== '') {
-                entryData.end_date = endDate;
-            }
-            // Add devotee count if provided
-            if (devoteeCount && !isNaN(parseInt(devoteeCount))) {
-                entryData.devotee_count = parseInt(devoteeCount);
-            }
+    // Determine which dates to create entries for
+    let entryDates = [today]; // Default to today
+    if (startDate && typeof startDate === 'string' && startDate.trim() !== '' &&
+        endDate && typeof endDate === 'string' && endDate.trim() !== '') {
+        // User provided both start and end date - create entries for each day in range
+        entryDates = getDateRange(startDate, endDate);
+    } else if (startDate && typeof startDate === 'string' && startDate.trim() !== '') {
+        // Only start date provided - use that specific date
+        entryDates = [startDate];
+    }
+
+    // Calculate count per day if date range is provided
+    const numberOfDays = entryDates.length;
+    const parsedDevoteeCount = devoteeCount && !isNaN(parseInt(devoteeCount)) ? parseInt(devoteeCount) : 1;
+
+    for (const entry of entries) {
+        const totalCount = parseInt(entry.count) || 0;
+        
+        // Distribute count across days (each day gets equal share)
+        const countPerDay = Math.floor(totalCount / numberOfDays);
+        const remainder = totalCount % numberOfDays;
+        
+        for (let i = 0; i < entryDates.length; i++) {
+            try {
+                // Add remainder to the last day
+                const dayCount = countPerDay + (i === entryDates.length - 1 ? remainder : 0);
+                
+                // Skip if count is 0
+                if (dayCount === 0) continue;
+                
+                const entryData = {
+                    user_id: userId,
+                    account_id: entry.accountId,
+                    count: dayCount,
+                    source_type: sourceType,
+                    entry_date: entryDates[i],
+                    created_at: new Date().toISOString()
+                };
+
+                // Store original date range for reference
+                if (startDate && typeof startDate === 'string' && startDate.trim() !== '') {
+                    entryData.start_date = startDate;
+                }
+                if (endDate && typeof endDate === 'string' && endDate.trim() !== '') {
+                    entryData.end_date = endDate;
+                }
+                
+                // Devotee count should remain the same for all entries (not multiplied by days)
+                // This represents the same devotees chanting across the date range
+                entryData.devotee_count = parsedDevoteeCount;
 
             console.log('Submitting entry data:', entryData);
 

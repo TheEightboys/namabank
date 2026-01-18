@@ -197,6 +197,70 @@ const LandingPage = () => {
                     </div>
                 </section>
 
+                {/* Divyavani Subdomains Section */}
+                <section className="divyavani-section fade-in-delay-2" style={{
+                    background: 'linear-gradient(135deg, #f8f4f0 0%, #fff8e1 100%)',
+                    padding: '2rem',
+                    borderRadius: '16px',
+                    margin: '2rem 0',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                }}>
+                    <h3 style={{ color: '#8B4513', marginBottom: '0.5rem', fontSize: '1.3rem' }}>🙏 Divyavani - Divine Words</h3>
+                    <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                        Explore the divine teachings in your preferred language
+                    </p>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: '1.5rem',
+                        flexWrap: 'wrap'
+                    }}>
+                        <a 
+                            href="https://divyavanienglish.namavruksha.org" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, #FF9933 0%, #e88c2d 100%)',
+                                color: 'white',
+                                borderRadius: '50px',
+                                textDecoration: 'none',
+                                fontWeight: '600',
+                                boxShadow: '0 4px 12px rgba(255,153,51,0.3)',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.2rem' }}>🇬🇧</span>
+                            Divyavani English
+                        </a>
+                        <a 
+                            href="https://divyavanitamil.namavruksha.org" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, #8B4513 0%, #6d3610 100%)',
+                                color: 'white',
+                                borderRadius: '50px',
+                                textDecoration: 'none',
+                                fontWeight: '600',
+                                boxShadow: '0 4px 12px rgba(139,69,19,0.3)',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.2rem' }}>🇮🇳</span>
+                            திவ்யவாணி தமிழ்
+                        </a>
+                    </div>
+                </section>
+
                 {/* Humble Invitation */}
                 <section className="invitation-section">
                     <h3>🌼 A Humble Invitation</h3>

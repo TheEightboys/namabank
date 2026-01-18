@@ -92,13 +92,34 @@ const AudioPlayerPage = () => {
     const loopCountRef = useRef(0);
     const maxLoopsRef = useRef(1);
     const isPlayingRef = useRef(false);
+    const lastEndedTimeRef = useRef(0); // Debounce for audio ended events
+    const isProcessingEndedRef = useRef(false); // Prevent multiple simultaneous ended handlers
 
     useEffect(() => { loopCountRef.current = loopCount; }, [loopCount]);
     useEffect(() => { maxLoopsRef.current = selectedAudio?.maxLoops || 1; }, [selectedAudio]);
     useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
     // Handle Audio Ended - Loop infinitely until user stops
+    // Added debouncing to prevent multiple rapid fires
     const handleAudioEnded = () => {
+        const now = Date.now();
+        
+        // Debounce: Ignore if less than 500ms since last ended event
+        // This prevents double-counting from rapid audio events
+        if (now - lastEndedTimeRef.current < 500) {
+            console.log('Audio ended event debounced - too soon since last event');
+            return;
+        }
+        
+        // Prevent multiple simultaneous processing
+        if (isProcessingEndedRef.current) {
+            console.log('Audio ended event skipped - already processing');
+            return;
+        }
+        
+        isProcessingEndedRef.current = true;
+        lastEndedTimeRef.current = now;
+        
         console.log('Audio ended - current loop:', loopCountRef.current);
         const newCount = loopCountRef.current + 1;
         setLoopCount(newCount);
@@ -110,7 +131,16 @@ const AudioPlayerPage = () => {
         // Always loop - only stop when user manually stops
         if (isPlayingRef.current && audioRef.current) {
             audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(err => console.log('Replay failed:', err));
+            audioRef.current.play()
+                .then(() => {
+                    isProcessingEndedRef.current = false;
+                })
+                .catch(err => {
+                    console.log('Replay failed:', err);
+                    isProcessingEndedRef.current = false;
+                });
+        } else {
+            isProcessingEndedRef.current = false;
         }
     };
 
@@ -122,6 +152,10 @@ const AudioPlayerPage = () => {
     };
 
     const handlePlay = (audio) => {
+        // Reset debounce refs when switching audio
+        lastEndedTimeRef.current = 0;
+        isProcessingEndedRef.current = false;
+        
         if (selectedAudio?.id !== audio.id) {
             setLoopCount(0);
             if (inputMode === 'nama') setNamaCount(0);
@@ -162,6 +196,9 @@ const AudioPlayerPage = () => {
         setIsPlaying(false);
         setIsPaused(false);
         stopSimulation();
+        // Reset debounce refs when stopping
+        lastEndedTimeRef.current = 0;
+        isProcessingEndedRef.current = false;
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
